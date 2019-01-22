@@ -20,10 +20,10 @@ sys3 = ss(A, B, C(2, :), D(2, :), 'InputDelay', [7, 3]);
 
 %%%%%%%% Simulation Parameters %%%%%%%%
 t = 0:1:150;
-% u = ones(2, numel(t));
-u = zeros(2, numel(t));
-u(1, :) = 0.157;
-u(2, :) = 0.05337;
+u = ones(2, numel(t));
+% u = zeros(2, numel(t));
+% u(1, :) = 0.157;
+% u(2, :) = 0.05337;
 x0 = [0, 0, 0, 0];
 
 %%%%%%%% Simulation of y1 %%%%%%%%
