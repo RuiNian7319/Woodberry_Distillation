@@ -20,12 +20,11 @@ sys3 = ss(A, B, C(2, :), D(2, :), 'InputDelay', [7, 3]);
 
 %%%%%%%% Simulation Parameters %%%%%%%%
 t = 0:1:150;
-u = ones(2, numel(t));
-% u = zeros(2, numel(t));
-% u(1, :) = 0.157;
-% u(2, :) = 0.05337;
+% u = ones(2, numel(t));
+u = zeros(2, numel(t));
+u(1, :) = 0.157;
+u(2, :) = 0.05337;
 x0 = [0, 0, 0, 0];
-
 
 %%%%%%%% Simulation of y1 %%%%%%%%
 [y1, x1] = lsim(sys2, u, t, x0);
@@ -50,13 +49,13 @@ figure()
 plot(t, y(:, 1), t, y1, '--r')
 legend('Transfer Function', 'State Space', 'Interpreter', 'latex');
 xlabel('Time, \textit{t} (s)', 'Interpreter', 'latex');
-ylabel('%MeOH in Distillate, X_D (%)', 'FontName', 'Times New Roman');
+ylabel('\%MeOH in Distillate, \textit{$X_D$} (\%)', 'Interpreter', 'latex');
 
 figure()
 plot(t, y(:, 2), t, y2, '--r')
 legend('Transfer Function', 'State Space', 'Interpreter', 'latex');
 xlabel('Time, \textit{t} (s)', 'Interpreter', 'latex');
-ylabel('%MeOH in Bottoms, X_B (%)', 'FontName', 'Times New Roman');
+ylabel('\%MeOH in Bottoms, \textit{$X_B$} (\%)', 'Interpreter', 'latex');
 
 %%%%%%%% Simulation of the SISO System %%%%%%%%
 % num = [0 1];
