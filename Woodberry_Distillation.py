@@ -48,7 +48,7 @@ class WoodBerryDistillation:
     def __str__(self):
         return "Wood-Berry distillation simulation object."
 
-    def __init__(self, nsim, x0, u0, xs=np.array([2.6219, 1.7129, 1.113, 0.7632]), us=np.array([0.157, 0.053]),
+    def __init__(self, nsim, x0, u0, xs=np.array([2.6219, 1.7129, 1.113, 0.7632]), us=np.array([0.157, 0.05337]),
                  step_size=1):
         """
         Description
@@ -107,11 +107,11 @@ class WoodBerryDistillation:
         x3 = state[2]
         x4 = state[3]
 
-        u11 = inputs[0][0]
-        u12 = inputs[0][1]
+        u11 = inputs[0]
+        u12 = inputs[1]
 
-        u21 = inputs[0][0]
-        u22 = inputs[0][1]
+        u21 = inputs[2]
+        u22 = inputs[3]
 
         dxdt1 = self.A[0, 0] * x1 + self.B[0, 0] * u11
         dxdt2 = self.A[1, 1] * x2 + self.B[1, 0] * u12
@@ -139,7 +139,9 @@ class WoodBerryDistillation:
 
         """
 
-        x_next = odeint(self.ode, self.x[time - 1], [self.timestep[time - 1], self.timestep[time]], args=(inputs, ))
+        delay_u = np.array([self.u[time - 1, 0], self.u[time - 7, 0], self.u[time - 3, 1], self.u[time - 3, 1]])
+
+        x_next = odeint(self.ode, self.x[time - 1], [self.timestep[time - 1], self.timestep[time]], args=(delay_u, ))
 
         # odeint outputs the current time and the last time's x, so x_next[-1] is taken.
         # State, input, and output trajectories
@@ -171,16 +173,16 @@ if __name__ == "__main__":
     init_state = np.array([0, 0, 0, 0])
     init_input = np.array([0, 0])
 
-    env = WoodBerryDistillation(nsim=150, x0=init_state, u0=init_input)
+    env = WoodBerryDistillation(nsim=157, x0=init_state, u0=init_input)
 
     # Starting at time 7 because the largest delay is 7
     for time_step in range(7, env.Nsim + 1):
 
         if 30 < time_step < 60:
-            control_input = np.array([[0.157, 0.053]])
+            control_input = np.array([[0.157, 0.05337]])
         elif 60 <= time_step:
-            control_input = np.array([[0.157, 0.053]])
+            control_input = np.array([[0.157, 0.05337]])
         else:
-            control_input = np.array([[0.157, 0.053]])
+            control_input = np.array([[0.157, 0.05337]])
 
         State, Reward, Done, Info = env.step(control_input, time_step)
