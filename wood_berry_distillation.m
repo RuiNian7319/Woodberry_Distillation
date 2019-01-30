@@ -44,6 +44,14 @@ x0 = [0, 0, 0, 0];
 % plot(t, y, t, u)
 % legend('Response', 'Input')
 
+%%%%%%%% Decoupled Transfer Function Realization %%%%%%%%
+
+num = {6.37, 0; 0, -9.65};
+den = {[0.61 5.45 1], [1, 1, 1]; [1, 1, 1], [0, 4.59, 1]};
+
+sys4 = tf(num, den, 'IODelay', [0.92 1; 1 3.31]);
+[y3, x3] = lsim(sys4, u, t, x0);
+
 %%%%%%%%  Figure Generation  %%%%%%%%
 figure()
 plot(t, y(:, 1), t, y1, '--r')
@@ -56,6 +64,13 @@ plot(t, y(:, 2), t, y2, '--r')
 legend('Transfer Function', 'State Space', 'Interpreter', 'latex');
 xlabel('Time, \textit{t} (s)', 'Interpreter', 'latex');
 ylabel('\%MeOH in Bottoms, \textit{$X_B$} (\%)', 'Interpreter', 'latex');
+
+figure()
+plot(t, y(:, 1), t, y3(:, 1), '--r')
+legend('Transfer Function', 'State Space', 'Interpreter', 'latex');
+xlabel('Time, \textit{t} (s)', 'Interpreter', 'latex');
+ylabel('\%MeOH in Bottoms, \textit{$X_B$} (\%)', 'Interpreter', 'latex');
+
 
 %%%%%%%% Simulation of the SISO System %%%%%%%%
 % num = [0 1];
