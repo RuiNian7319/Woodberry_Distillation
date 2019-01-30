@@ -24,16 +24,16 @@ t = 0:1:150;
 u = zeros(1, numel(t));
 u(1, :) = 15.7;
 u(2, :) = 0;
-x0 = [51, -58];
+x0 = [0, 0];
+
+%%%%%%%% Simulation of Transfer Function %%%%%%%%
+[y, x] = lsim(sys1, u, t, x0);
 
 %%%%%%%% Simulation of y1 %%%%%%%%
 [y1, x1] = lsim(sys2, u, t, x0);
 
 %%%%%%%% Simulation of y2 %%%%%%%%
 [y2, x2] = lsim(sys3, u, t, x0);
-
-%%%%%%%% Simulation of Transfer Function %%%%%%%%
-[y, x] = lsim(sys1, u, t, x0);
 
 %%%%%%%%  Figure Generation  %%%%%%%%
 figure()
