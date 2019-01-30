@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load Data
-transfer_function = np.loadtxt('transfer_function.csv', delimiter=',')
-matlab_state_space = np.loadtxt('state_space.csv', delimiter=',')
-python_state_space = np.loadtxt('python_state_space.csv')
+transfer_function = np.loadtxt('step_test_tf.csv', delimiter=',')
+matlab_state_space = np.loadtxt('step_test_ss.csv', delimiter=',')
+python_state_space = np.loadtxt('step_test_python.csv')
 
 """
 Math Plotting Library settings
@@ -32,7 +32,7 @@ plt.plot(python_state_space[6:, 0], label='State Space (Python)')
 
 plt.xlim([0, 150])
 
-plt.legend(loc=4, prop={'size': 10}, frameon=False)
+plt.legend(loc=0, prop={'size': 10}, frameon=False)
 
 # Bottoms Trajectory
 
@@ -46,8 +46,7 @@ plt.plot(matlab_state_space[:, 1], label='State Space (MATLAB)')
 plt.plot(python_state_space[6:, 1], label='State Space (Python)')
 
 plt.xlim([0, 150])
-plt.ylim([-0.4, 0.2])
 
-plt.legend(loc=4, prop={'size': 10}, frameon=False)
+plt.legend(loc=0, prop={'size': 10}, frameon=False)
 
 plt.show()

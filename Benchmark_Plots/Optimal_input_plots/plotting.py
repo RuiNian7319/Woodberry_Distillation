@@ -26,9 +26,9 @@ plt.title(r"$X_D$ Trajectory")
 plt.ylabel(r"\%MeOH in Distillate, \textit{$X_D$} (\%)")
 plt.xlabel(r"Time, \textit{T} (steps)")
 
-plt.plot(transfer_function[:, 0], label='Transfer Function')
-plt.plot(matlab_state_space[:, 0], label='State Space (MATLAB)')
-plt.plot(python_state_space[6:, 0], label='State Space (Python)')
+plt.plot(transfer_function[:, 0] * 100, label='Transfer Function')
+plt.plot(matlab_state_space[:, 0] * 100, label='State Space (MATLAB)')
+plt.plot(python_state_space[6:, 0] * 100, label='State Space (Python)')
 
 plt.xlim([0, 150])
 
@@ -41,12 +41,11 @@ plt.title(r"$X_B$ Trajectory")
 plt.ylabel(r"\%MeOH in Bottoms, \textit{$X_B$} (\%)")
 plt.xlabel(r"Time, \textit{T} (steps)")
 
-plt.plot(transfer_function[:, 1], label='Transfer Function')
-plt.plot(matlab_state_space[:, 1], label='State Space (MATLAB)')
-plt.plot(python_state_space[6:, 1], label='State Space (Python)')
+plt.plot(transfer_function[:, 1] * 100, label='Transfer Function')
+plt.plot(matlab_state_space[:, 1] * 100, label='State Space (MATLAB)')
+plt.plot(python_state_space[6:, 1] * 100, label='State Space (Python)')
 
 plt.xlim([0, 150])
-plt.ylim([-0.4, 0.2])
 
 plt.legend(loc=4, prop={'size': 10}, frameon=False)
 

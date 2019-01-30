@@ -1,5 +1,6 @@
 """
-Wood-Berry Distillation Column Simulation
+Wood-Berry Distillation Column Simulation (Decoupled).
+This simulator broke the TITO Wood-Berry distillation column to 2 distributed SISO systems.
 
 By: Rui Nian
 
@@ -86,13 +87,13 @@ class WoodBerryDistillation:
         # Output, state, and input trajectories
         self.y = np.zeros((nsim + 1, 4))
 
-        self.x = np.zeros((nsim + 1, 4))
+        self.x = np.zeros((nsim + 1, 2))
         self.u = np.zeros((nsim + 1, 2))
 
         # State space model
-        self.A = np.array([[-0.0599, 0, 0, 0], [0, -0.0917, 0, 0], [0, 0, -0.0476, 0], [0, 0, 0, -0.0694]])
-        self.B = np.array([[1, 0], [1, 0], [0, 1], [0, 1]])
-        self.C = np.array([[0.7665, 0, -0.9, 0], [0, 0.6055, 0, -1.3472]])
+        self.A = np.array([[-0.07699, 0], [0, -0.08929]])
+        self.B = np.array([[0.5, 0], [0, 1]])
+        self.C = np.array([[0.9809, 0], [0, -0.8621]])
         self.D = 0
 
         # Timeline of simulation
@@ -119,8 +120,6 @@ class WoodBerryDistillation:
 
         x1 = state[0]
         x2 = state[1]
-        x3 = state[2]
-        x4 = state[3]
 
         u11 = inputs[0]
         u12 = inputs[1]
