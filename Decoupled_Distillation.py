@@ -78,11 +78,15 @@ class WoodBerryDistillation:
 
         """
         self.Nsim = nsim
-        self.x0 = x0
-        self.u0 = u0
         self.xs = xs
         self.us = us
         self.step_size = step_size
+
+        # State space model
+        self.A = np.array([[-0.07699, 0], [0, -0.08929]])
+        self.B = np.array([[0.5, 0], [0, 1]])
+        self.C = np.array([[0.9809, 0], [0, -0.8621]])
+        self.D = 0
 
         # Output, state, and input trajectories
         self.y = np.zeros((nsim + 1, 4))
@@ -90,11 +94,14 @@ class WoodBerryDistillation:
         self.x = np.zeros((nsim + 1, 2))
         self.u = np.zeros((nsim + 1, 2))
 
-        # State space model
-        self.A = np.array([[-0.07699, 0], [0, -0.08929]])
-        self.B = np.array([[0.5, 0], [0, 1]])
-        self.C = np.array([[0.9809, 0], [0, -0.8621]])
-        self.D = 0
+        # Populate the initial states
+        self.x[:] = x0
+        self.u[:] = u0
+
+        self.y[:, 0] = self.C[0, 0] * self.x[0, 0]
+        self.y[:, 1] = self.C[1, 1] * self.x[0, 1]
+        self.y[:, 2] = 100 - self.y[0, 0]
+        self.y[:, 3] = 100 - self.y[0, 1]
 
         # Timeline of simulation
         self.timestep = np.linspace(0, self.Nsim * self.step_size, self.Nsim + 1)
@@ -121,18 +128,13 @@ class WoodBerryDistillation:
         x1 = state[0]
         x2 = state[1]
 
-        u11 = inputs[0]
-        u12 = inputs[1]
+        u1 = inputs[0]
+        u2 = inputs[1]
 
-        u21 = inputs[2]
-        u22 = inputs[3]
+        dxdt1 = self.A[0, 0] * x1 + self.B[0, 0] * u1
+        dxdt2 = self.A[1, 1] * x2 + self.B[1, 1] * u2
 
-        dxdt1 = self.A[0, 0] * x1 + self.B[0, 0] * u11
-        dxdt2 = self.A[1, 1] * x2 + self.B[1, 0] * u12
-        dxdt3 = self.A[2, 2] * x3 + self.B[2, 1] * u21
-        dxdt4 = self.A[3, 3] * x4 + self.B[3, 1] * u22
-
-        dxdt = [dxdt1, dxdt2, dxdt3, dxdt4]
+        dxdt = [dxdt1, dxdt2]
 
         return dxdt
 
@@ -153,7 +155,7 @@ class WoodBerryDistillation:
 
         """
 
-        delay_u = np.array([self.u[time - 1, 0], self.u[time - 7, 0], self.u[time - 3, 1], self.u[time - 3, 1]])
+        delay_u = np.array([self.u[time - 1, 0], self.u[time - 2, 1]])
 
         x_next = odeint(self.ode, self.x[time - 1], [self.timestep[time - 1], self.timestep[time]], args=(delay_u, ))
 
@@ -162,8 +164,8 @@ class WoodBerryDistillation:
         self.x[time, :] = x_next[-1]
         self.u[time, :] = inputs[0]
 
-        self.y[time, 0] = self.C[0, 0] * self.x[time, 0] + self.C[0, 2] * self.x[time, 2]
-        self.y[time, 1] = self.C[1, 1] * self.x[time, 1] + self.C[1, 3] * self.x[time, 3]
+        self.y[time, 0] = self.C[0, 0] * self.x[time, 0]
+        self.y[time, 1] = self.C[1, 1] * self.x[time, 1]
 
         # Ensure compositions are always between 0 and 100
         # for i, comp in enumerate(self.y[time, :]):
@@ -193,6 +195,14 @@ class WoodBerryDistillation:
 
     def reset(self):
         pass
+
+    def plots(self):
+
+        plt.plot(self.y[:, 0])
+        plt.plot(self.y[:, 1])
+        plt.axhline(y=0, color='red')
+        plt.axhline(y=100, color='red')
+        plt.show()
 
 
 class PIDControl:
@@ -250,30 +260,36 @@ class PIDControl:
 
 if __name__ == "__main__":
 
-    PID1 = PIDControl(kp=0.40, ki=0.05, kd=0)
-    PID2 = PIDControl(kp=-0.35, ki=-0.015, kd=0)
+    PID1 = PIDControl(kp=1.8, ki=0.21, kd=0)
+    PID2 = PIDControl(kp=-0.28, ki=-0.075, kd=0)
 
-    init_state = np.array([2., 1.5, 1., 0.7])
+    init_state = np.array([51, -58])
     init_input = np.array([0, 0])
 
-    env = WoodBerryDistillation(nsim=300, x0=init_state, u0=init_input)
+    env = WoodBerryDistillation(nsim=600, x0=init_state, u0=init_input)
 
     # Starting at time 7 because the largest delay is 7
     input_1 = 10
     input_2 = 5
-    setpoint = 100
-    for t in range(7, env.Nsim + 1):
+    set_point1 = 100
+    set_point2 = 0
 
-        if t % 10 == 0:
-            input_1 = PID1(setpoint, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0], env.u[t - 1, 0])
-            input_2 = PID2(0, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1], env.u[t - 1, 1])
+    for t in range(3, env.Nsim + 1):
 
-        # if t % 100 == 0:
-        #     setpoint = 50
+        if t % 3 == 0:
+            input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0], env.u[t - 1, 0])
+            input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1], env.u[t - 1, 1])
+
+        # Set-point change
+        if t % 100 == 0:
+            set_point1 = 50
+            set_point2 = 10
+
+        # Disturbance
+        if t % 200 == 0:
+            env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 5, size=(1, 2))
 
         control_input = np.array([[input_1, input_2]])
-
-        # control_input = np.array([[1, 1]])
 
         State, Reward, Done, Info = env.step(control_input, t)
 
