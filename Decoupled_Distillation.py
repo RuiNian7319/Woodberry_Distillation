@@ -59,13 +59,25 @@ class WoodBerryDistillation:
 
     """
 
+    # Plotting formats
+    fonts = {"family": "serif",
+             "weight": "normal",
+             "size": "12"}
+
+    plt.rc('font', **fonts)
+    plt.rc('text', usetex=True)
+
+    # Random Seeding
+    random.seed(1)
+    np.random.seed(1)
+
     def __repr__(self):
         return "WoodBerryDistillation({}, {}, {})".format(self.nsim, self.x0, self.u0)
 
     def __str__(self):
         return "Wood-Berry distillation simulation object."
 
-    def __init__(self, nsim, x0, u0, xs=np.array([2.6219, 1.7129, 1.113, 0.7632]), us=np.array([0.157, 0.05337]),
+    def __init__(self, nsim, x0, u0, xs=np.array([101.946, 0]), us=np.array([15.7, 0]),
                  step_size=1):
         """
         Description
@@ -78,6 +90,8 @@ class WoodBerryDistillation:
 
         """
         self.Nsim = nsim
+        self.x0 = x0
+        self.u0 = u0
         self.xs = xs
         self.us = us
         self.step_size = step_size
@@ -193,15 +207,47 @@ class WoodBerryDistillation:
 
         return state, reward, done, info
 
-    def reset(self):
-        pass
+    def actuator_fault(self, actuator_num, actuator_value):
+
+        if actuator_num = 1:
+            pass
+
+        if actuator_num = 2:
+            pass
+
+    def
+
+    def reset(self, rand_init=False):
+
+        # Output, state, and input trajectories
+        self.y = np.zeros((self.Nsim + 1, 4))
+
+        self.x = np.zeros((self.Nsim + 1, 2))
+        self.u = np.zeros((self.Nsim + 1, 2))
+
+        # Populate the initial states
+        if rand_init:
+            self.x[:] = self.x0 + np.random.uniform(-20, 20, size=(1, 2))
+            self.u[:] = self.u0 + np.random.uniform(-3, 3, size=(1, 2))
+        else:
+            self.x[:] = self.x0
+            self.u[:] = self.u0
+
+        self.y[:, 0] = self.C[0, 0] * self.x[0, 0]
+        self.y[:, 1] = self.C[1, 1] * self.x[0, 1]
+        self.y[:, 2] = 100 - self.y[0, 0]
+        self.y[:, 3] = 100 - self.y[0, 1]
 
     def plots(self):
 
-        plt.plot(self.y[:, 0])
-        plt.plot(self.y[:, 1])
-        plt.axhline(y=0, color='red')
-        plt.axhline(y=100, color='red')
+        plt.plot(self.y[:, 0], label='$X_D$')
+        plt.plot(self.y[:, 1], label='$X_B$')
+
+        plt.xlabel(r'Time, \textit{t} (s)')
+        plt.ylabel(r'\%MeOH, \textit{X} (wt. \%)')
+
+        plt.legend(loc=0, prop={'size': 12}, frameon=False)
+
         plt.show()
 
 
@@ -293,8 +339,4 @@ if __name__ == "__main__":
 
         State, Reward, Done, Info = env.step(control_input, t)
 
-    plt.plot(env.y[:, 0])
-    plt.plot(env.y[:, 1])
-    plt.axhline(y=0, color='red')
-    plt.axhline(y=100, color='red')
-    plt.show()
+    env.plots()

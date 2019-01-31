@@ -251,30 +251,39 @@ class PIDControl:
 
 if __name__ == "__main__":
 
-    PID1 = PIDControl(kp=0.40, ki=0.05, kd=0)
-    PID2 = PIDControl(kp=-0.35, ki=-0.015, kd=0)
+    # PID1 = PIDControl(kp=0.5, ki=0.05, kd=0)
+    # PID2 = PIDControl(kp=-0.3, ki=-0.015, kd=0)
+
+    PID1 = PIDControl(kp=1.31, ki=0.21, kd=0)
+    PID2 = PIDControl(kp=-0.28, ki=-0.06, kd=0)
 
     init_state = np.array([2., 1.5, 1., 0.7])
     init_input = np.array([0, 0])
 
-    env = WoodBerryDistillation(nsim=300, x0=init_state, u0=init_input)
+    env = WoodBerryDistillation(nsim=600, x0=init_state, u0=init_input)
 
     # Starting at time 7 because the largest delay is 7
     input_1 = 10
     input_2 = 5
-    setpoint = 100
+    set_point1 = 100
+    set_point2 = 0
+
     for t in range(7, env.Nsim + 1):
 
-        if t % 10 == 0:
-            input_1 = PID1(setpoint, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0], env.u[t - 1, 0])
-            input_2 = PID2(0, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1], env.u[t - 1, 1])
+        if t % 8 == 0:
+            input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0], env.u[t - 1, 0])
+            input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1], env.u[t - 1, 1])
 
-        # if t % 100 == 0:
-        #     setpoint = 50
+        # Set-point change
+        if t % 100 == 0:
+            set_point1 = 50
+            set_point2 = 10
+
+        # Disturbance
+        if t % 320 == 0:
+            env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 5, size=(1, 4))
 
         control_input = np.array([[input_1, input_2]])
-
-        # control_input = np.array([[1, 1]])
 
         State, Reward, Done, Info = env.step(control_input, t)
 
