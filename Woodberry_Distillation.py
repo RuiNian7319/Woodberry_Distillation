@@ -58,13 +58,25 @@ class WoodBerryDistillation:
 
     """
 
+    # Plotting formats
+    fonts = {"family": "serif",
+             "weight": "normal",
+             "size": "12"}
+
+    plt.rc('font', **fonts)
+    plt.rc('text', usetex=True)
+
+    # Random Seeding
+    random.seed(1)
+    np.random.seed(1)
+
     def __repr__(self):
         return "WoodBerryDistillation({}, {}, {})".format(self.nsim, self.x0, self.u0)
 
     def __str__(self):
         return "Wood-Berry distillation simulation object."
 
-    def __init__(self, nsim, x0, u0, xs=np.array([2.6219, 1.7129, 1.113, 0.7632]), us=np.array([0.157, 0.05337]),
+    def __init__(self, nsim, x0, u0, xs=np.array([2.6219, 1.7129, 1.113, 0.7632]), us=np.array([15.7, 5.337]),
                  step_size=1):
         """
         Description
@@ -83,17 +95,26 @@ class WoodBerryDistillation:
         self.us = us
         self.step_size = step_size
 
+        # State space model
+        self.A = np.array([[-0.0599, 0, 0, 0], [0, -0.0917, 0, 0], [0, 0, -0.0476, 0], [0, 0, 0, -0.0694]])
+        self.B = np.array([[1, 0], [1, 0], [0, 1], [0, 1]])
+        self.C = np.array([[0.7665, 0, -0.9, 0], [0, 0.6055, 0, -1.3472]])
+        self.D = 0
+
         # Output, state, and input trajectories
         self.y = np.zeros((nsim + 1, 4))
 
         self.x = np.zeros((nsim + 1, 4))
         self.u = np.zeros((nsim + 1, 2))
 
-        # State space model
-        self.A = np.array([[-0.0599, 0, 0, 0], [0, -0.0917, 0, 0], [0, 0, -0.0476, 0], [0, 0, 0, -0.0694]])
-        self.B = np.array([[1, 0], [1, 0], [0, 1], [0, 1]])
-        self.C = np.array([[0.7665, 0, -0.9, 0], [0, 0.6055, 0, -1.3472]])
-        self.D = 0
+        # Populate the initial states
+        self.x[:] = x0
+        self.u[:] = u0
+
+        self.y[:, 0] = self.C[0, 0] * self.x[0, 0] + self.C[0, 2] * self.x[0, 2]
+        self.y[:, 1] = self.C[1, 1] * self.x[0, 1] + self.C[1, 3] * self.x[0, 3]
+        self.y[:, 2] = 100 - self.y[0, 0]
+        self.y[:, 3] = 100 - self.y[0, 1]
 
         # Timeline of simulation
         self.timestep = np.linspace(0, self.Nsim * self.step_size, self.Nsim + 1)
@@ -192,8 +213,54 @@ class WoodBerryDistillation:
 
         return state, reward, done, info
 
-    def reset(self):
-        pass
+    def actuator_fault(self, actuator_num, actuator_value):
+
+        if actuator_num == 1:
+            pass
+
+        if actuator_num == 2:
+            pass
+
+    def sensor_fault(self, sensor_num, sensor_value):
+
+        if actuator_num == 1:
+            pass
+
+        if actuator_num == 2:
+            pass
+
+    def reset(self, rand_init=False):
+
+        # Output, state, and input trajectories
+        self.y = np.zeros((self.Nsim + 1, 4))
+
+        self.x = np.zeros((self.Nsim + 1, 2))
+        self.u = np.zeros((self.Nsim + 1, 2))
+
+        # Populate the initial states
+        if rand_init:
+            self.x[:] = self.x0 + np.random.uniform(-20, 20, size=(1, 2))
+            self.u[:] = self.u0 + np.random.uniform(-3, 3, size=(1, 2))
+        else:
+            self.x[:] = self.x0
+            self.u[:] = self.u0
+
+        self.y[:, 0] = self.C[0, 0] * self.x[0, 0]
+        self.y[:, 1] = self.C[1, 1] * self.x[0, 1]
+        self.y[:, 2] = 100 - self.y[0, 0]
+        self.y[:, 3] = 100 - self.y[0, 1]
+
+    def plots(self):
+
+        plt.plot(self.y[:, 0], label='$X_D$')
+        plt.plot(self.y[:, 1], label='$X_B$')
+
+        plt.xlabel(r'Time, \textit{t} (s)')
+        plt.ylabel(r'\%MeOH, \textit{X} (wt. \%)')
+
+        plt.legend(loc=0, prop={'size': 12}, frameon=False)
+
+        plt.show()
 
 
 class PIDControl:
@@ -257,10 +324,10 @@ if __name__ == "__main__":
     PID1 = PIDControl(kp=1.31, ki=0.21, kd=0)
     PID2 = PIDControl(kp=-0.28, ki=-0.06, kd=0)
 
-    init_state = np.array([2., 1.5, 1., 0.7])
-    init_input = np.array([0, 0])
+    init_state = np.array([20., 15, 10., 7.])
+    init_input = np.array([10, 5])
 
-    env = WoodBerryDistillation(nsim=600, x0=init_state, u0=init_input)
+    env = WoodBerryDistillation(nsim=250, x0=init_state, u0=init_input)
 
     # Starting at time 7 because the largest delay is 7
     input_1 = 10
@@ -270,7 +337,7 @@ if __name__ == "__main__":
 
     for t in range(7, env.Nsim + 1):
 
-        if t % 8 == 0:
+        if t % 4 == 0:
             input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0], env.u[t - 1, 0])
             input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1], env.u[t - 1, 1])
 
@@ -280,15 +347,11 @@ if __name__ == "__main__":
             set_point2 = 10
 
         # Disturbance
-        if t % 320 == 0:
-            env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 5, size=(1, 4))
+        # if t % 320 == 0:
+        #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 5, size=(1, 4))
 
         control_input = np.array([[input_1, input_2]])
 
         State, Reward, Done, Info = env.step(control_input, t)
 
-    plt.plot(env.y[:, 0])
-    plt.plot(env.y[:, 1])
-    plt.axhline(y=0, color='red')
-    plt.axhline(y=100, color='red')
-    plt.show()
+    env.plots()

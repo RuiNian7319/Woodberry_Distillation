@@ -209,13 +209,19 @@ class WoodBerryDistillation:
 
     def actuator_fault(self, actuator_num, actuator_value):
 
-        if actuator_num = 1:
+        if actuator_num == 1:
             pass
 
-        if actuator_num = 2:
+        if actuator_num == 2:
             pass
 
-    def
+    def sensor_fault(self, sensor_num, sensor_value):
+
+        if actuator_num == 1:
+            pass
+
+        if actuator_num == 2:
+            pass
 
     def reset(self, rand_init=False):
 
