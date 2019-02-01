@@ -18,16 +18,20 @@ copyright notice and this permission notice shall be included in all copies or s
 
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import random
 
 from copy import deepcopy
 from scipy.integrate import odeint
 
-from RL_Module import ReinforceLearning
-
 import gc
 
 import warnings
+import sys
+
+sys.path.insert(0, '/home/rui/Documents/IOL_Fault_Tolerant_Control/Woodberry_Distillation')
+
+from RL_Module_Velocity import ReinforceLearning
 
 
 class WoodBerryDistillation:
@@ -223,11 +227,11 @@ class WoodBerryDistillation:
         """
 
         if economics == 'distillate':
-            error_y1 = abs(self.y[time, 0] - setpoint[0])
+            error_y1 = abs(self.y[time, 0] - setpoint)
             reward = -error_y1
 
         elif economics == 'bottoms':
-            error_y2 = abs(self.y[time, 1] - setpoint[1])
+            error_y2 = abs(self.y[time, 1] - setpoint)
             reward = -error_y2
 
         elif economics == 'all':
@@ -397,7 +401,7 @@ class DiscretePIDControl:
         # Controls from the digital controller
         self.u = []
 
-    def __call__(self, setpoint, x_cur, x_1, x_2, last_u, eval_time=4):
+    def __call__(self, setpoint, x_cur, x_1, x_2, eval_time=4):
         """
         Description
              -----
@@ -422,7 +426,7 @@ class DiscretePIDControl:
 
         # Constraints on output of PID
         # control_action = max(0, min(last_u + du, 20))
-        control_action = last_u + du
+        control_action = self.u[-1] + du
 
         # Used to synchronize PID inputs with plant outputs if plant and PID are evaluated at different time periods
         for _ in range(eval_time):
@@ -445,32 +449,25 @@ if __name__ == "__main__":
     # Build RL Objects
     rl = ReinforceLearning(discount_factor=0.95, states_start=300, states_stop=340, states_interval=0.5,
                            actions_start=-15, actions_stop=15, actions_interval=2.5, learning_rate=0.5,
-                           epsilon=0.2, doe=1.2, eval_period=60)
+                           epsilon=0.2, doe=1.2, eval_period=45)
 
     # Building states for the problem, states will be the tracking errors
-    states = []
+    states = np.linspace(-20, 20, 328)
 
-    rl.x1 = np.linspace(-15, 15, 121)
-    rl.x2 = np.linspace(-5, 5, 41)
-
-    for i in rl.x1:
-        for j in rl.x2:
-            states.append([i, j])
-
-    # Building actions for the problem, actions will be inputs of u2
     rl.user_states(list(states))
 
-    actions = np.linspace(-8, 8, 25)
+    # Building actions for the problem, actions will be inputs of u2
+    actions = np.linspace(-10, 10, 161)
 
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    # q = np.loadtxt("Q_Matrix.txt")
-    # t = np.loadtxt("T_Matrix.txt")
-    # nt = np.loadtxt("NT_Matrix.txt")
+    q = np.loadtxt("Q_Matrix.txt")
+    t = np.loadtxt("T_Matrix.txt")
+    nt = np.loadtxt("NT_Matrix.txt")
 
-    # rl.user_matrices(q, t, nt)
-    # del q, t, nt, actions
+    rl.user_matrices(q, t, nt)
+    del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -488,16 +485,13 @@ if __name__ == "__main__":
     # Starting at time 7 because the largest delay is 7
     input_1 = env.u[0, 0]
     input_2 = env.u[0, 1]
-    set_point1 = 100.
-    set_point2 = 0.
+    set_point1 = 100
+    set_point2 = 0
 
     iterations = 1
     rlist = []
 
     for iteration in range(iterations):
-
-        if iteration % 10 == 0:
-            print(iteration)
 
         # Resetting environment and PID controllers
         env.reset(rand_init=False)
@@ -512,16 +506,19 @@ if __name__ == "__main__":
         action = 0
         action_index = 0
 
+        # Valve stuck position
+        valve_pos = np.random.uniform(10, 14)
+
         for t in range(7, env.Nsim + 1):
 
             if t % 4 == 0:
-                input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0], env.u[t - 1, 0])
-                input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1], env.u[t - 1, 1])
+                input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
+                input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Set-point change
-            # if t == 100:
-            #     set_point1 = 60
-            #     set_point2 += 2
+            # if t == 1000:
+            #     set_point1 = 80
+                # set_point2 += 2
 
             # Disturbance
             # if t % 320 == 0:
@@ -529,36 +526,39 @@ if __name__ == "__main__":
 
             # Actuator Faults
             if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=13, time=t, noise=True)
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
 
             # RL Controls
-            if 110 < t:
+            if 150 < t:
                 if t % rl.eval_period == 0:
-                    state, action = rl.ucb_action_selection(env.y[t - 1, :] - np.array([set_point1, set_point2]))
-                    action, action_index = rl.action_selection(state, action, env.u[t - 1, 1], no_decay=25,
-                                                               ep_greedy=True, time=t, min_eps_rate=0.01)
+                    state, action = rl.ucb_action_selection(env.y[t - 1, 0] - set_point1)
+                    action, action_index = rl.action_selection(state, action, env.u[t - 1, 0], no_decay=25,
+                                                               ep_greedy=False, time=t, min_eps_rate=0.01)
 
-            if 110 < t and t % 4 == 0:
-                input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1], env.u[t - 1, 1])
+            if 170 < t and t % 4 == 0:
+                input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Generate input tuple
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=False,
                                                       economics='distillate')
 
             # RL Feedback
-            if t == rl.eval_feedback:
-                rl.matrix_update(action_index, Reward, state, env.y[t, :] - np.array([set_point1, set_point2]), 5)
+            if t == rl.eval_feedback and t > 150:
+                rl.matrix_update(action_index, Reward, state, env.y[t, 0] - set_point1, 5)
                 tot_reward = tot_reward + Reward
 
         rlist.append(tot_reward)
 
         # Autosave Q, T, and NT matrices
-        rl.autosave(iteration, 250)
+        rl.autosave(iteration, 50)
 
-    env.plots(timestart=50, timestop=5950)
+        if iteration % 10 == 0 and iteration != 0:
+            print("Iteration {} | Current Reward {}".format(iteration, tot_reward))
+
+    env.plots(timestart=50, timestop=6000)
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
     # plt.show()
 
