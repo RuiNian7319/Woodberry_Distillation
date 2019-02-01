@@ -158,7 +158,7 @@ class WoodBerryDistillation:
 
         return dxdt
 
-    def step(self, inputs, time, noise=False):
+    def step(self, inputs, time, setpoint, noise=False):
         """
         Description
              -----
@@ -207,11 +207,32 @@ class WoodBerryDistillation:
         else:
             done = False
 
-        reward = "placeholder"
+        reward = self.reward_calculator(setpoint, time)
 
         info = "placeholder"
 
         return state, reward, done, info
+
+    def reward_calculator(self, setpoint, time):
+        """
+        Description
+             -----
+
+
+
+        Inputs
+             -----
+
+
+
+        Returns
+             -----
+
+        """
+
+        reward = abs((self.y[time, 0] - setpoint[0]) + (self.y[time, 1] - setpoint[1]))
+
+        return reward
 
     def actuator_fault(self, actuator_num, actuator_value, time):
         """
@@ -279,7 +300,7 @@ class WoodBerryDistillation:
         # Output, state, and input trajectories
         self.y = np.zeros((self.Nsim + 1, 4))
 
-        self.x = np.zeros((self.Nsim + 1, 2))
+        self.x = np.zeros((self.Nsim + 1, 4))
         self.u = np.zeros((self.Nsim + 1, 2))
 
         # Populate the initial states
@@ -458,8 +479,8 @@ if __name__ == "__main__":
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1], env.u[t - 1, 1])
 
             # Set-point change
-            if t == 100:
-                set_point1 = 60
+            # if t == 100:
+            #     set_point1 = 60
                 # set_point2 += 2
 
             # Disturbance
@@ -482,12 +503,12 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            State, Reward, Done, Info = env.step(control_input, t, noise=False)
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False)
 
             # RL Feedback
             if t == rl.eval_feedback:
-                rl.matrix_update(action_index, reward, state, model.x[t, :], 5)
-                tot_reward = tot_reward + reward
+                rl.matrix_update(action_index, Reward, state, env.x[t, :], 5)
+                tot_reward = tot_reward + Reward
 
         rlist.append(tot_reward)
 
