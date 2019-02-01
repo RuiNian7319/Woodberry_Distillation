@@ -80,16 +80,7 @@ class WoodBerryDistillation:
 
     def __init__(self, nsim, x0, u0, xs=np.array([2.6219, 1.7129, 1.113, 0.7632]), us=np.array([15.7, 5.337]),
                  step_size=1):
-        """
-        Description
-             -----
 
-
-
-        Variables
-             -----
-
-        """
         self.Nsim = nsim
         self.x0 = x0
         self.u0 = u0
@@ -129,8 +120,9 @@ class WoodBerryDistillation:
 
         Inputs
              -----
-                state:
-               inputs:
+                state: States of the system at time t - 1. Current states has no physical meaning. [x1, x2, x3, x4]
+                    t: Limits of integration for sp.odeint.  [t - 1, t]
+               inputs: Control inputs into the ordinary differential equations. [u1, u2]
 
 
         Returns
@@ -230,7 +222,7 @@ class WoodBerryDistillation:
 
         """
 
-        reward = abs((self.y[time, 0] - setpoint[0]) + (self.y[time, 1] - setpoint[1]))
+        reward = (self.y[time, 0] - setpoint[0]) + (self.y[time, 1] - setpoint[1])
 
         return reward
 
@@ -298,7 +290,7 @@ class WoodBerryDistillation:
         """
 
         # Output, state, and input trajectories
-        self.y = np.zeros((self.Nsim + 1, 4))
+        self.y = np.zeros((self.Nsim + 1, 2))
 
         self.x = np.zeros((self.Nsim + 1, 4))
         self.u = np.zeros((self.Nsim + 1, 2))
@@ -313,8 +305,6 @@ class WoodBerryDistillation:
 
         self.y[:, 0] = self.C[0, 0] * self.x[0, 0]
         self.y[:, 1] = self.C[1, 1] * self.x[0, 1]
-        self.y[:, 2] = 100 - self.y[0, 0]
-        self.y[:, 3] = 100 - self.y[0, 1]
 
     def plots(self, timestart=50, timestop=550):
         """
@@ -416,6 +406,15 @@ class PIDControl:
 
         return control_action
 
+    def reset(self):
+        """
+        Description
+             -----
+                Resets the PID input trajectory.
+
+        """
+        self.u = []
+
 
 if __name__ == "__main__":
 
@@ -460,19 +459,24 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    iterations = 100
+    iterations = 10
+    rlist = []
 
     for iteration in range(iterations):
 
+        # Resetting environment and PID controllers
         env.reset(rand_init=False)
+        PID1.u = [3.9, 3.9, 3.9, 3.9, 3.9, 3.9, 3.9, 3.9]
+        PID2.u = [0, 0, 0, 0, 0, 0, 0, 0]
+
+        input_1 = env.u[0, 0]
+        input_2 = env.u[0, 1]
+
         tot_reward = 0
         state = 0
         action_index = 0
 
         for t in range(7, env.Nsim + 1):
-
-            if t % 10000 == 0:
-                print(t)
 
             if t % 4 == 0:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0], env.u[t - 1, 0])
@@ -512,7 +516,7 @@ if __name__ == "__main__":
 
         rlist.append(tot_reward)
 
-        rl.autosave(episode, 250)
+        rl.autosave(iteration, 250)
 
     env.plots()
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
