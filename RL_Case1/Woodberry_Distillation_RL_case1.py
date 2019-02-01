@@ -223,11 +223,11 @@ class WoodBerryDistillation:
         """
 
         if economics == 'distillate':
-            error_y1 = abs(self.y[time, 0] - setpoint[0])
+            error_y1 = abs(self.y[time, 0] - setpoint)
             reward = -error_y1
 
         elif economics == 'bottoms':
-            error_y2 = abs(self.y[time, 1] - setpoint[1])
+            error_y2 = abs(self.y[time, 1] - setpoint)
             reward = -error_y2
 
         elif economics == 'all':
@@ -448,29 +448,21 @@ if __name__ == "__main__":
                            epsilon=0.2, doe=1.2, eval_period=60)
 
     # Building states for the problem, states will be the tracking errors
-    states = []
+    states = np.linspace(-20, 20, 328)
 
-    rl.x1 = np.linspace(-15, 15, 121)
-    rl.x2 = np.linspace(-5, 5, 41)
-
-    for i in rl.x1:
-        for j in rl.x2:
-            states.append([i, j])
-
-    # Building actions for the problem, actions will be inputs of u2
     rl.user_states(list(states))
 
-    actions = np.linspace(-8, 8, 25)
+    # Building actions for the problem, actions will be inputs of u2
+    actions = np.linspace(3, 25, 92)
 
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    q = np.loadtxt("Q_Matrix.txt")
-    t = np.loadtxt("T_Matrix.txt")
-    nt = np.loadtxt("NT_Matrix.txt")
-
-    rl.user_matrices(q, t, nt)
-    del q, t, nt, actions
+    # q = np.loadtxt("Q_Matrix.txt")
+    # t = np.loadtxt("T_Matrix.txt")
+    # nt = np.loadtxt("NT_Matrix.txt")
+    #
+    # rl.user_matrices(q, t, nt)
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -488,10 +480,10 @@ if __name__ == "__main__":
     # Starting at time 7 because the largest delay is 7
     input_1 = env.u[0, 0]
     input_2 = env.u[0, 1]
-    set_point1 = 100.
-    set_point2 = 0.
+    set_point1 = 100
+    set_point2 = 0
 
-    iterations = 1
+    iterations = 3000
     rlist = []
 
     for iteration in range(iterations):
@@ -534,7 +526,7 @@ if __name__ == "__main__":
             # RL Controls
             if 110 < t:
                 if t % rl.eval_period == 0:
-                    state, action = rl.ucb_action_selection(env.y[t - 1, :] - np.array([set_point1, set_point2]))
+                    state, action = rl.ucb_action_selection(env.y[t - 1, 0] - set_point1)
                     action, action_index = rl.action_selection(state, action, env.u[t - 1, 1], no_decay=25,
                                                                ep_greedy=True, time=t, min_eps_rate=0.01)
 
@@ -545,12 +537,12 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=False,
                                                       economics='distillate')
 
             # RL Feedback
             if t == rl.eval_feedback:
-                rl.matrix_update(action_index, Reward, state, env.y[t, :] - np.array([set_point1, set_point2]), 5)
+                rl.matrix_update(action_index, Reward, state, env.y[t, 0] - set_point1, 5)
                 tot_reward = tot_reward + Reward
 
         rlist.append(tot_reward)
@@ -558,7 +550,7 @@ if __name__ == "__main__":
         # Autosave Q, T, and NT matrices
         rl.autosave(iteration, 250)
 
-    env.plots(timestart=50, timestop=5950)
+    env.plots(timestart=50, timestop=6000)
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
     # plt.show()
 
