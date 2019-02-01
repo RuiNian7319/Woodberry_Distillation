@@ -244,18 +244,17 @@ class ReinforceLearning:
 
         self.learning_rate = max(self.learning_rate, min_learn_rate)
 
-    """
-    Q-value update
-    
-    action: Index of the latest action
-    rewards: Reward received from the latest state action pair
-    old_state: The index of the state the system was in before the action was performed
-    new_state: The index of the state the system is in after the action was performed
-    no_decay: Amount of times state/action pair can be visited before decay in learning rate and epsilon occurs
-    min_learn_rate: Minimum value for learning rate.  Default value is 0.0008
-    """
-
     def matrix_update(self, action, rewards, old_state, cur_state, no_decay, min_learn_rate=0.0008):
+        """
+        Q-value update
+
+        action: Index of the latest action
+        rewards: Reward received from the latest state action pair
+        old_state: The index of the state the system was in before the action was performed
+        new_state: The index of the state the system is in after the action was performed
+        no_decay: Amount of times state/action pair can be visited before decay in learning rate and epsilon occurs
+        min_learn_rate: Minimum value for learning rate.  Default value is 0.0008
+        """
 
         # State detection for new state
         new_state = self.state_detection(cur_state)
@@ -281,36 +280,33 @@ class ReinforceLearning:
             else:
                 pass
 
-    """
-    Determines when the next feedback evaluation period is
-
-    time: Current simulation time
-    """
-
     def feedback_evaluation(self, time):
+        """
+        Determines when the next feedback evaluation period is
+
+        time: Current simulation time
+        """
         self.eval_feedback = time + self.eval_period - 1
 
-    """
-    Auto save Q, T, and NT matrices
-    
-    sim_time: Current time step in simulation
-    time: After this many time steps, auto save the Q, T and NT matrices
-    """
-
     def autosave(self, sim_time, time):
+        """
+        Auto save Q, T, and NT matrices
+
+        sim_time: Current time step in simulation
+        time: After this many time steps, auto save the Q, T and NT matrices
+        """
         if sim_time % time == 0 and sim_time != 0:
             print("Auto-saving...       Iteration number: ", sim_time)
             np.savetxt("Q_Matrix.txt", self.Q)
             np.savetxt("T_Matrix.txt", self.T)
             np.savetxt("NT_Matrix.txt", self.NT)
 
-    """
-    Linear Interpolation to get "continuous" actions
-    
-    y = y0 + (x - x0) * (y1 - y0) / (x1 - x0)
-    """
-
     def interpolation(self, x):
+        """
+        Linear Interpolation to get "continuous" actions
+
+        y = y0 + (x - x0) * (y1 - y0) / (x1 - x0)
+        """
         i = 0
 
         # Find the state that x is less than (i.e., the upper bound of x).
@@ -332,16 +328,15 @@ class ReinforceLearning:
 
         return y
 
-    """
-    Weighted Linear Interpolation to use the Q-value information efficiently
-    
-    y = y0 + (x - x0) * (ay1 - by0) / (x1 - x0)
-    
-    a = eta * Q1 / Q0
-    b = eta * Q0 / Q1
-    """
-
     def weighted_interpolation(self, x, eta=1):
+        """
+        Weighted Linear Interpolation to use the Q-value information efficiently
+
+        y = y0 + (x - x0) * (ay1 - by0) / (x1 - x0)
+
+        a = eta * Q1 / Q0
+        b = eta * Q0 / Q1
+        """
         i = 0
         # Find the state that x is less than (i.e., the upper bound of x).
         while x > self.states[i]:
@@ -368,18 +363,16 @@ class ReinforceLearning:
 
         return y
 
-    """
-    This output is used for debugging purposes.  Prints the initialization code of the RL.
-    """
-
     def __repr__(self):
+        """
+        This output is used for debugging purposes.  Prints the initialization code of the RL.
+        """
         return "ReinforceLearning(".format(len(self.states), len(self.actions))
 
-    """
-    Meaningful output if this class is printed.  Tells the users the amount of states and actions.
-    """
-
     def __str__(self):
+        """
+        Meaningful output if this class is printed.  Tells the users the amount of states and actions.
+        """
         return "RL controller with {} states and {} actions".format(len(self.states), len(self.actions))
 
 

@@ -1,9 +1,9 @@
 """
-Wood-Berry Distillation Column Simulation
+Wood-Berry Distillation Column Simulation with Reinforcement Learning for Fault Tolerant Control
 
 By: Rui Nian
 
-Date of Last Edit: January 22nd 2019
+Date of Last Edit: Feb 1st 2019
 
 
 The MIT License (MIT)
@@ -192,7 +192,7 @@ class WoodBerryDistillation:
         #     else:
         #         pass
 
-        state = deepcopy(self.y[time, :])
+        new_state = deepcopy(self.y[time, :])
 
         if time == (self.Nsim - 1):
             done = True
@@ -203,7 +203,7 @@ class WoodBerryDistillation:
 
         info = "placeholder"
 
-        return state, reward, done, info
+        return new_state, reward, done, info
 
     def reward_calculator(self, setpoint, time):
         """
@@ -221,12 +221,13 @@ class WoodBerryDistillation:
              -----
 
         """
-
-        reward = (self.y[time, 0] - setpoint[0]) + (self.y[time, 1] - setpoint[1])
+        error_y1 = abs(self.y[time, 0] - setpoint[0])
+        error_y2 = abs(self.y[time, 1] - setpoint[1])
+        reward = -(error_y1 + error_y2)
 
         return reward
 
-    def actuator_fault(self, actuator_num, actuator_value, time):
+    def actuator_fault(self, actuator_num, actuator_value, time, noise=False):
         """
         Description
              -----
@@ -243,17 +244,27 @@ class WoodBerryDistillation:
 
         """
 
+        # If actuator 1 is selected
         if actuator_num == 1:
-            self.u[time - 1, 0] = actuator_value + np.random.normal(0, 0.2)
+            self.u[time - 1, 0] = actuator_value
 
+            # If noise is enabled for actuator 1
+            if noise:
+                self.u[time - 1, 0] += np.random.normal(0, 0.2)
+
+        # If actuator 2 is selected
         if actuator_num == 2:
-            self.u[time - 1, 1] = actuator_value + np.random.normal(0, 0.2)
+            self.u[time - 1, 1] = actuator_value
+
+            # If noise is enabled for actuator 2
+            if noise:
+                self.u[time - 1, 1] += np.random.normal(0, 0.2)
 
     def sensor_fault(self, sensor_num, sensor_value):
         """
         Description
              -----
-
+                Currently a dummy placeholder
 
 
         Inputs
@@ -266,11 +277,14 @@ class WoodBerryDistillation:
 
         """
 
-        if actuator_num == 1:
+        if sensor_num == 1:
+            self.u = self.u
             pass
 
-        if actuator_num == 2:
+        if sensor_num == 2:
             pass
+
+        return sensor_value
 
     def reset(self, rand_init=False):
         """
@@ -295,7 +309,7 @@ class WoodBerryDistillation:
         self.x = np.zeros((self.Nsim + 1, 4))
         self.u = np.zeros((self.Nsim + 1, 2))
 
-        # Populate the initial states
+        # Populate the initial states, if rand_init, add white noise sampled from uniform distribution.
         if rand_init:
             self.x[:] = self.x0 + np.random.uniform(-20, 20, size=(1, 2))
             self.u[:] = self.u0 + np.random.uniform(-3, 3, size=(1, 2))
@@ -310,21 +324,18 @@ class WoodBerryDistillation:
         """
         Description
              -----
-
+                Plots the %MeOH in the distillate and bottoms as a function of time.
 
 
         Inputs
              -----
-
-
-
-        Returns
-             -----
+                timestart: What time (in simulation time) to start plotting
+                 timestop: What time (in simulation time) to stop plotting
 
         """
 
-        plt.plot(self.y[timestart:timestop, 0], label='$X_D$')
-        plt.plot(self.y[timestart:timestop, 1], label='$X_B$')
+        plt.plot(self.timestep[timestart:timestop], self.y[timestart:timestop, 0], label='$X_D$')
+        plt.plot(self.timestep[timestart:timestop], self.y[timestart:timestop, 1], label='$X_B$')
 
         plt.xlabel(r'Time, \textit{t} (s)')
         plt.ylabel(r'\%MeOH, \textit{X} (wt. \%)')
@@ -334,16 +345,16 @@ class WoodBerryDistillation:
         plt.show()
 
 
-class PIDControl:
+class DiscretePIDControl:
     """
 
 
     """
     def __repr__(self):
-        return "PIDControl({}, {}, {})".format(self.Kp, self.Ki, self.Kd)
+        return "DiscretePIDControl({}, {}, {})".format(self.Kp, self.Ki, self.Kd)
 
     def __str__(self):
-        return "PID Controller"
+        return "Discrete-Time PID Controller"
 
     def __init__(self, kp, ki, kd):
         """
@@ -421,7 +432,7 @@ if __name__ == "__main__":
     # Build RL Objects
     rl = ReinforceLearning(discount_factor=0.95, states_start=300, states_stop=340, states_interval=0.5,
                            actions_start=-15, actions_stop=15, actions_interval=2.5, learning_rate=0.5,
-                           epsilon=0.2, doe=1.2, eval_period=1)
+                           epsilon=0.2, doe=1.2, eval_period=60)
 
     # Building states for the problem, states will be the tracking errors
     states = []
@@ -440,9 +451,16 @@ if __name__ == "__main__":
 
     rl.user_actions(actions)
 
+    # Load Q, T, and NT matrices from previous training
+    # q = np.loadtxt("Q_Matrix.txt")
+    # t = np.loadtxt("T_Matrix.txt")
+    # nt = np.loadtxt("NT_Matrix.txt")
+    #
+    # rl.user_matrices(q, t, nt)
+
     # Build PID Objects
-    PID1 = PIDControl(kp=1.31, ki=0.21, kd=0)
-    PID2 = PIDControl(kp=-0.28, ki=-0.06, kd=0)
+    PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
+    PID2 = DiscretePIDControl(kp=-0.28, ki=-0.06, kd=0)
 
     # Set initial conditions
     PID1.u = [3.9, 3.9, 3.9, 3.9, 3.9, 3.9, 3.9, 3.9]
@@ -451,7 +469,7 @@ if __name__ == "__main__":
     init_state = np.array([65.13, 42.55, 0.0, 0.0])
     init_input = np.array([3.9, 0.0])
 
-    env = WoodBerryDistillation(nsim=550, x0=init_state, u0=init_input)
+    env = WoodBerryDistillation(nsim=6000, x0=init_state, u0=init_input)
 
     # Starting at time 7 because the largest delay is 7
     input_1 = env.u[0, 0]
@@ -459,10 +477,13 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    iterations = 10
+    iterations = 100
     rlist = []
 
     for iteration in range(iterations):
+
+        if iteration % 10 == 0:
+            print(iteration)
 
         # Resetting environment and PID controllers
         env.reset(rand_init=False)
@@ -474,6 +495,7 @@ if __name__ == "__main__":
 
         tot_reward = 0
         state = 0
+        action = 0
         action_index = 0
 
         for t in range(7, env.Nsim + 1):
@@ -493,15 +515,17 @@ if __name__ == "__main__":
 
             # Actuator Faults
             if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=13, time=t)
+                env.actuator_fault(actuator_num=1, actuator_value=13, time=t, noise=False)
 
             # RL Controls
-            if 105 < t:
+            if 110 < t:
                 if t % rl.eval_period == 0:
-                    state, action = rl.ucb_action_selection(env.x[t - 1, :])
-                    action, action_index = rl.action_selection(state, action, env.u[t - 1, :], no_decay=25,
-                                                               ep_greedy=False, time=t,
-                                                               min_eps_rate=0.5)
+                    state, action = rl.ucb_action_selection(env.y[t - 1, :] - np.array([set_point1, set_point2]))
+                    action, action_index = rl.action_selection(state, action, env.u[t - 1, 1], no_decay=25,
+                                                               ep_greedy=True, time=t, min_eps_rate=0.01)
+
+            if 110 < t and t % 4 == 0:
+                input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1], env.u[t - 1, 1])
 
             # Generate input tuple
             control_input = np.array([[input_1, input_2]])
@@ -511,11 +535,12 @@ if __name__ == "__main__":
 
             # RL Feedback
             if t == rl.eval_feedback:
-                rl.matrix_update(action_index, Reward, state, env.x[t, :], 5)
+                rl.matrix_update(action_index, Reward, state, env.y[t, :] - np.array([set_point1, set_point2]), 5)
                 tot_reward = tot_reward + Reward
 
         rlist.append(tot_reward)
 
+        # Autosave Q, T, and NT matrices
         rl.autosave(iteration, 250)
 
     env.plots()
