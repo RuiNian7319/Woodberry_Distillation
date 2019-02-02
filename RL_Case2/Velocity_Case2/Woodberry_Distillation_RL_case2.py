@@ -450,15 +450,15 @@ if __name__ == "__main__":
     # Build RL Objects
     rl = ReinforceLearning(discount_factor=0.95, states_start=300, states_stop=340, states_interval=0.5,
                            actions_start=-15, actions_stop=15, actions_interval=2.5, learning_rate=0.5,
-                           epsilon=0.2, doe=1.2, eval_period=45)
+                           epsilon=0.2, doe=1.2, eval_period=30)
 
     # Building states for the problem, states will be the tracking errors
-    states = np.linspace(-30, 10, 41)
+    states = np.linspace(-30, 10, 201)
 
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.linspace(-5, 5, 11)
+    actions = np.linspace(-15, 15, 121)
 
     rl.user_actions(actions)
 
@@ -509,7 +509,8 @@ if __name__ == "__main__":
         action_list = [set_point2]
 
         # Valve stuck position
-        valve_pos = 8
+        # valve_pos = np.random.uniform(7, 15)
+        valve_pos = 12
 
         for t in range(7, env.Nsim + 1):
 
@@ -518,17 +519,17 @@ if __name__ == "__main__":
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Set-point change
-            # if t == 1000:
-            #     set_point1 = 80
-                # set_point2 += 2
+            if t == 110:
+                set_point1 = 60
+            #     set_point2 += 2
 
             # Disturbance
-            # if t % 320 == 0:
-            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 5, size=(1, 4))
+            if 3000 < t < 3060:
+                env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 1, size=(1, 4))
 
             # Actuator Faults
             if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
 
             # RL Controls
             if 150 < t:
@@ -556,7 +557,7 @@ if __name__ == "__main__":
         rlist.append(tot_reward)
 
         # Autosave Q, T, and NT matrices
-        rl.autosave(episode, 50)
+        # rl.autosave(episode, 50)
 
         if episode % 10 == 0 and episode != 0:
             print("Episode {} | Current Reward {}".format(episode, tot_reward))
