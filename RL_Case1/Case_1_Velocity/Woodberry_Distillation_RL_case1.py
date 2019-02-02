@@ -30,6 +30,7 @@ import warnings
 import sys
 
 sys.path.insert(0, '/home/rui/Documents/IOL_Fault_Tolerant_Control/Woodberry_Distillation')
+sys.path.insert(0, '/Users/ruinian/Documents/MATLAB/Woodberry_Distillation')
 
 from RL_Module_Velocity import ReinforceLearning
 
@@ -452,12 +453,12 @@ if __name__ == "__main__":
                            epsilon=0.2, doe=1.2, eval_period=45)
 
     # Building states for the problem, states will be the tracking errors
-    states = np.linspace(-20, 20, 328)
+    states = np.linspace(-30, 10, 41)
 
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.linspace(-10, 10, 161)
+    actions = np.linspace(-5, 5, 11)
 
     rl.user_actions(actions)
 
@@ -488,10 +489,10 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    iterations = 1
+    episodes = 1
     rlist = []
 
-    for iteration in range(iterations):
+    for episode in range(episodes):
 
         # Resetting environment and PID controllers
         env.reset(rand_init=False)
@@ -505,9 +506,10 @@ if __name__ == "__main__":
         state = 0
         action = 0
         action_index = 0
+        action_list = [set_point2]
 
         # Valve stuck position
-        valve_pos = np.random.uniform(10, 14)
+        valve_pos = 8
 
         for t in range(7, env.Nsim + 1):
 
@@ -532,8 +534,9 @@ if __name__ == "__main__":
             if 150 < t:
                 if t % rl.eval_period == 0:
                     state, action = rl.ucb_action_selection(env.y[t - 1, 0] - set_point1)
-                    action, action_index = rl.action_selection(state, action, env.u[t - 1, 0], no_decay=25,
+                    action, action_index = rl.action_selection(state, action, action_list[-1], no_decay=25,
                                                                ep_greedy=False, time=t, min_eps_rate=0.01)
+                    action_list.append(action)
 
             if 170 < t and t % 4 == 0:
                 input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
@@ -553,10 +556,10 @@ if __name__ == "__main__":
         rlist.append(tot_reward)
 
         # Autosave Q, T, and NT matrices
-        rl.autosave(iteration, 50)
+        rl.autosave(episode, 50)
 
-        if iteration % 10 == 0 and iteration != 0:
-            print("Iteration {} | Current Reward {}".format(iteration, tot_reward))
+        if episode % 10 == 0 and episode != 0:
+            print("Episode {} | Current Reward {}".format(episode, tot_reward))
 
     env.plots(timestart=50, timestop=6000)
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
