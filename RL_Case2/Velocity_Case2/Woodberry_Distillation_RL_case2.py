@@ -456,12 +456,12 @@ if __name__ == "__main__":
                            epsilon=0.2, doe=1.2, eval_period=30)
 
     # Building states for the problem, states will be the tracking errors
-    states = np.linspace(-30, 10, 201)
+    states = np.linspace(-15, 25, 41)
 
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.linspace(-15, 15, 121)
+    actions = np.linspace(-5, 5, 11)
 
     rl.user_actions(actions)
 
@@ -492,7 +492,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1
+    episodes = 101
     rlist = []
 
     for episode in range(episodes):
@@ -507,17 +507,17 @@ if __name__ == "__main__":
 
         tot_reward = 0
         state = 0
-        action = 100
+        action = set_point1
         action_index = 0
         action_list = [set_point1]
 
         # Valve stuck position
-        # valve_pos = np.random.uniform(7, 15)
-        valve_pos = 7
+        valve_pos = np.random.uniform(1, 8)
+        # valve_pos = 2
 
         for t in range(7, env.Nsim + 1):
 
-            if t % 4 == 0:
+            if t % 4 == 0 and t < 170:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
@@ -537,9 +537,9 @@ if __name__ == "__main__":
             # RL Controls
             if 150 < t:
                 if t % rl.eval_period == 0:
-                    state, action = rl.ucb_action_selection(env.y[t - 1, 0] - set_point1)
+                    state, action = rl.ucb_action_selection(env.y[t - 1, 1] - set_point2)
                     action, action_index = rl.action_selection(state, action, action_list[-1], no_decay=25,
-                                                               ep_greedy=False, time=t, min_eps_rate=0.01)
+                                                               ep_greedy=True, time=t, min_eps_rate=0.01)
                     action_list.append(action)
 
             if 170 < t and t % 4 == 0:
@@ -549,7 +549,7 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=False,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point2, noise=False,
                                                       economics='bottoms')
 
             # RL Feedback
@@ -560,9 +560,9 @@ if __name__ == "__main__":
         rlist.append(tot_reward)
 
         # Autosave Q, T, and NT matrices
-        # rl.autosave(episode, 50)
+        rl.autosave(episode, 50)
 
-        if episode % 10 == 0 and episode != 0:
+        if episode % 10 == 0:
             print("Episode {} | Current Reward {}".format(episode, tot_reward))
 
     env.plots(timestart=50, timestop=6000)
