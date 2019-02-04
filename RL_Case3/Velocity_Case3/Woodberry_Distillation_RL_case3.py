@@ -180,6 +180,7 @@ class WoodBerryDistillation:
         # Account for delay of the models
         delay_u = np.array([self.u[time - 1, 0], self.u[time - 7, 0], self.u[time - 3, 1], self.u[time - 3, 1]])
 
+        # Integrate the states to calculate for the next states
         x_next = odeint(self.ode, self.x[time - 1], [self.timestep[time - 1], self.timestep[time]], args=(delay_u, ))
 
         # odeint outputs the current time and the last time's x, so x_next[-1] is taken.
@@ -216,7 +217,7 @@ class WoodBerryDistillation:
 
         return new_state, reward, done, info
 
-    def reward_calculator(self, setpoint, time, economics='distillate'):
+    def reward_calculator(self, setpoint, time, economics='distillate', w_y1=0.8, w_y2=0.2):
         """
         Description
              -----
@@ -244,6 +245,14 @@ class WoodBerryDistillation:
         elif economics == 'all':
             error_y1 = abs(self.y[time, 0] - setpoint[0])
             error_y2 = abs(self.y[time, 1] - setpoint[1])
+            reward = -(error_y1 + error_y2)
+
+        elif economics == 'mixed':
+
+            assert(w_y1 + w_y2 == 1)
+
+            error_y1 = w_y1 * abs(self.y[time, 0] - setpoint[0])
+            error_y2 = w_y2 * abs(self.y[time, 1] - setpoint[1])
             reward = -(error_y1 + error_y2)
 
         else:
@@ -274,7 +283,7 @@ class WoodBerryDistillation:
 
             # If noise is enabled for actuator 1
             if noise:
-                self.u[time - 1, 0] += np.random.normal(0, 0.2)
+                self.u[time - 1, 0] += np.random.normal(0, 0.3)
 
         # If actuator 2 is selected
         if actuator_num == 2:
@@ -282,7 +291,7 @@ class WoodBerryDistillation:
 
             # If noise is enabled for actuator 2
             if noise:
-                self.u[time - 1, 1] += np.random.normal(0, 0.05)
+                self.u[time - 1, 1] += np.random.normal(0, 0.3)
 
     def sensor_fault(self, sensor_num, sensor_value):
         """
@@ -508,12 +517,12 @@ if __name__ == "__main__":
                            epsilon=0.2, doe=1.2, eval_period=30)
 
     # Building states for the problem, states will be the tracking errors
-    states = np.linspace(-15, 25, 201)
+    states = np.linspace(-30, 10, 201)
 
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.linspace(-12, 18, 121)
+    actions = np.linspace(-15, 15, 121)
 
     rl.user_actions(actions)
 
@@ -559,13 +568,13 @@ if __name__ == "__main__":
 
         tot_reward = 0
         state = 0
-        action = set_point1
+        action = set_point2
         action_index = 0
-        action_list = [set_point1]
+        action_list = [set_point2]
 
         # Valve stuck position
-        valve_pos = np.random.uniform(1, 8)
-        # valve_pos = 4.1
+        # valve_pos = np.random.uniform(7, 15)
+        valve_pos = 12
 
         for t in range(7, env.Nsim + 1):
 
@@ -575,34 +584,34 @@ if __name__ == "__main__":
 
             # Set-point change
             # if t == 100:
-                # et_point1 = 60
-                # set_point2 += 20
+            #     set_point1 = 65
+            #     set_point2 += 2
 
             # Disturbance
             # if 350 < t < 370:
-            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 1, size=(1, 4))
+            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 3, size=(1, 4))
 
             # Actuator Faults
             if 105 < t:
-                env.actuator_fault(actuator_num=2, actuator_value=valve_pos, time=t, noise=True)
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
 
             # RL Controls
             if 150 < t:
                 if t % rl.eval_period == 0:
-                    state, action = rl.ucb_action_selection(env.y[t - 1, 1] - set_point2)
+                    state, action = rl.ucb_action_selection(env.y[t - 1, 0] - set_point1)
                     action, action_index = rl.action_selection(state, action, action_list[-1], no_decay=25,
                                                                ep_greedy=False, time=t, min_eps_rate=0.01)
                     action_list.append(action)
 
             if 170 < t and t % 4 == 0:
-                input_1 = PID1(action, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
+                input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Generate input tuple
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point2, noise=True,
-                                                      economics='bottoms')
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=True,
+                                                      economics='all')
 
             # RL Feedback
             if t == rl.eval_feedback and t > 150:
@@ -612,12 +621,12 @@ if __name__ == "__main__":
         rlist.append(tot_reward)
 
         # Autosave Q, T, and NT matrices
-        # rl.autosave(episode, 50)
+        # rl.autosave(episode, 100)
 
         if episode % 10 == 0:
             print("Episode {} | Current Reward {}".format(episode, tot_reward))
 
-    env.plots(timestart=50, timestop=500)
+    env.plots(timestart=50, timestop=6000)
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
     # plt.show()
 

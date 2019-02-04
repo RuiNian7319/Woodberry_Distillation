@@ -115,6 +115,9 @@ class WoodBerryDistillation:
         # Timeline of simulation
         self.timestep = np.linspace(0, self.Nsim * self.step_size, self.Nsim + 1)
 
+        # Setpoint changes
+        self.set_point = np.zeros(nsim + 1)
+
     def ode(self, state, t, inputs):
         """
         Description
@@ -172,8 +175,12 @@ class WoodBerryDistillation:
 
         """
 
+        self.set_point[time] = setpoint
+
+        # Account for delay of the models
         delay_u = np.array([self.u[time - 1, 0], self.u[time - 7, 0], self.u[time - 3, 1], self.u[time - 3, 1]])
 
+        # Integrate the states to calculate for the next states
         x_next = odeint(self.ode, self.x[time - 1], [self.timestep[time - 1], self.timestep[time]], args=(delay_u, ))
 
         # odeint outputs the current time and the last time's x, so x_next[-1] is taken.
@@ -338,6 +345,9 @@ class WoodBerryDistillation:
         self.y[:, 0] = self.C[0, 0] * self.x[0, 0]
         self.y[:, 1] = self.C[1, 1] * self.x[0, 1]
 
+        # Setpoint changes
+        self.set_point = np.zeros((self.Nsim + 1, 1))
+
     def plots(self, timestart=50, timestop=550):
         """
         Description
@@ -361,6 +371,49 @@ class WoodBerryDistillation:
         plt.legend(loc=0, prop={'size': 12}, frameon=False)
 
         plt.show()
+
+    def cost_function(self, output='distillate', error_type='ISE', dead_period=15):
+        """
+        Description
+             -----
+
+
+
+        Inputs
+             -----
+                error:
+          dead_period:
+
+        Returns
+             -----
+                error:
+
+        """
+
+        error = 0
+
+        # Integral of absolute error evaluation
+        if error_type == "IAE":
+            if output == 'distillate':
+                error = abs(self.y[dead_period:, 0].reshape(-1, 1) - self.set_point[dead_period:])
+                error = sum(error) / (self.Nsim - dead_period)
+            elif output == 'bottoms':
+                error = abs(self.y[dead_period:, 1].reshape(-1, 1) - self.set_point[dead_period:])
+                error = sum(error) / (self.Nsim - dead_period)
+
+        # Integral of squared error evaluation
+        elif error_type == "ISE":
+            if output == 'distillate':
+                error = np.power(self.y[dead_period:, 0].reshape(-1, 1) - self.set_point[dead_period:], 2)
+                error = sum(error) / (self.Nsim - dead_period)
+            elif output == 'bottoms':
+                error = np.power(self.y[dead_period:, 1].reshape(-1, 1) - self.set_point[dead_period:], 2)
+                error = sum(error) / (self.Nsim - dead_period)
+
+        else:
+            raise ValueError('Improper error evaluation selected.')
+
+        return error
 
 
 class DiscretePIDControl:
@@ -512,8 +565,8 @@ if __name__ == "__main__":
         action_list = [set_point2]
 
         # Valve stuck position
-        valve_pos = np.random.uniform(7, 15)
-        # valve_pos = 12
+        # valve_pos = np.random.uniform(7, 15)
+        valve_pos = 12
 
         for t in range(7, env.Nsim + 1):
 
@@ -522,13 +575,13 @@ if __name__ == "__main__":
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Set-point change
-            if t == 110:
-                set_point1 = 60
+            # if t == 100:
+            #     set_point1 = 65
             #     set_point2 += 2
 
             # Disturbance
-            if 3000 < t < 3060:
-                env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 1, size=(1, 4))
+            # if 350 < t < 370:
+            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 3, size=(1, 4))
 
             # Actuator Faults
             if 105 < t:
