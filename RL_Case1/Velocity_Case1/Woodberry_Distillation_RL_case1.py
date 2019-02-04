@@ -268,7 +268,7 @@ class WoodBerryDistillation:
 
             # If noise is enabled for actuator 1
             if noise:
-                self.u[time - 1, 0] += np.random.normal(0, 0.2)
+                self.u[time - 1, 0] += np.random.normal(0, 0.3)
 
         # If actuator 2 is selected
         if actuator_num == 2:
@@ -276,7 +276,7 @@ class WoodBerryDistillation:
 
             # If noise is enabled for actuator 2
             if noise:
-                self.u[time - 1, 1] += np.random.normal(0, 0.2)
+                self.u[time - 1, 1] += np.random.normal(0, 0.3)
 
     def sensor_fault(self, sensor_num, sensor_value):
         """
@@ -466,12 +466,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    # q = np.loadtxt("Q_Matrix.txt")
-    # t = np.loadtxt("T_Matrix.txt")
-    # nt = np.loadtxt("NT_Matrix.txt")
-    #
-    # rl.user_matrices(q, t, nt)
-    # del q, t, nt, actions
+    q = np.loadtxt("Q_Matrix.txt")
+    t = np.loadtxt("T_Matrix.txt")
+    nt = np.loadtxt("NT_Matrix.txt")
+
+    rl.user_matrices(q, t, nt)
+    del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -492,7 +492,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 2001
+    episodes = 1
     rlist = []
 
     for episode in range(episodes):
@@ -522,24 +522,24 @@ if __name__ == "__main__":
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Set-point change
-            # if t == 110:
-            #     set_point1 = 60
+            if t == 110:
+                set_point1 = 60
             #     set_point2 += 2
 
             # Disturbance
-            # if 3000 < t < 3060:
-            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 1, size=(1, 4))
+            if 3000 < t < 3060:
+                env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 1, size=(1, 4))
 
             # Actuator Faults
             if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
 
             # RL Controls
             if 150 < t:
                 if t % rl.eval_period == 0:
                     state, action = rl.ucb_action_selection(env.y[t - 1, 0] - set_point1)
                     action, action_index = rl.action_selection(state, action, action_list[-1], no_decay=25,
-                                                               ep_greedy=True, time=t, min_eps_rate=0.01)
+                                                               ep_greedy=False, time=t, min_eps_rate=0.01)
                     action_list.append(action)
 
             if 170 < t and t % 4 == 0:
@@ -549,7 +549,7 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=False,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=True,
                                                       economics='distillate')
 
             # RL Feedback
@@ -560,7 +560,7 @@ if __name__ == "__main__":
         rlist.append(tot_reward)
 
         # Autosave Q, T, and NT matrices
-        rl.autosave(episode, 100)
+        # rl.autosave(episode, 100)
 
         if episode % 10 == 0:
             print("Episode {} | Current Reward {}".format(episode, tot_reward))
