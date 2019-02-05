@@ -243,16 +243,16 @@ class WoodBerryDistillation:
             reward = -error_y2
 
         elif economics == 'all':
-            error_y1 = abs(self.y[time, 0] - setpoint[0])
-            error_y2 = abs(self.y[time, 1] - setpoint[1])
+            error_y1 = np.square(abs(self.y[time, 0] - setpoint[0]))
+            error_y2 = np.square(abs(self.y[time, 1] - setpoint[1]))
             reward = -(error_y1 + error_y2)
 
         elif economics == 'mixed':
 
             assert(w_y1 + w_y2 == 1)
 
-            error_y1 = w_y1 * abs(self.y[time, 0] - setpoint[0])
-            error_y2 = w_y2 * abs(self.y[time, 1] - setpoint[1])
+            error_y1 = w_y1 * np.square(abs(self.y[time, 0] - setpoint[0]))
+            error_y2 = w_y2 * np.square(abs(self.y[time, 1] - setpoint[1]))
             reward = -(error_y1 + error_y2)
 
         else:
@@ -354,7 +354,7 @@ class WoodBerryDistillation:
         self.y[:, 1] = self.C[1, 1] * self.x[0, 1]
 
         # Setpoint changes
-        self.set_point = np.zeros((self.Nsim + 1, 1))
+        self.set_point = np.zeros((self.Nsim + 1, 2))
 
     def plots(self, timestart=50, timestop=550):
         """
@@ -517,12 +517,12 @@ if __name__ == "__main__":
                            epsilon=0.2, doe=1.2, eval_period=30)
 
     # Building states for the problem, states will be the tracking errors
-    states = np.linspace(-30, 10, 201)
+    states = np.linspace(-20, 20, 41)
 
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.linspace(-15, 15, 121)
+    actions = np.linspace(-15, 15, 31)
 
     rl.user_actions(actions)
 
@@ -610,8 +610,8 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=True,
-                                                      economics='all')
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=True,
+                                                      economics='mixed')
 
             # RL Feedback
             if t == rl.eval_feedback and t > 150:
@@ -621,7 +621,7 @@ if __name__ == "__main__":
         rlist.append(tot_reward)
 
         # Autosave Q, T, and NT matrices
-        # rl.autosave(episode, 100)
+        rl.autosave(episode, 100)
 
         if episode % 10 == 0:
             print("Episode {} | Current Reward {}".format(episode, tot_reward))

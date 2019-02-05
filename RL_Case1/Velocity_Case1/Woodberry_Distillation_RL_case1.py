@@ -563,6 +563,7 @@ if __name__ == "__main__":
         action = set_point2
         action_index = 0
         action_list = [set_point2]
+        time_list = [0]
 
         # Valve stuck position
         # valve_pos = np.random.uniform(7, 15)
@@ -593,7 +594,9 @@ if __name__ == "__main__":
                     state, action = rl.ucb_action_selection(env.y[t - 1, 0] - set_point1)
                     action, action_index = rl.action_selection(state, action, action_list[-1], no_decay=25,
                                                                ep_greedy=False, time=t, min_eps_rate=0.01)
+                    # To see how well the PID is tracking RL
                     action_list.append(action)
+                    time_list.append(t)
 
             if 170 < t and t % 4 == 0:
                 input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
