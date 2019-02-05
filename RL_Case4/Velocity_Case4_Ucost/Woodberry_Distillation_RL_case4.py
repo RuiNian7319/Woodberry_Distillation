@@ -266,7 +266,7 @@ class WoodBerryDistillation:
             error_y2 = w_y2 * np.square(abs(self.y[time, 1] - setpoint[1]))
 
             # Tracking error + change in input cost
-            reward = -(error_y1 + error_y2) - np.square(d_input)
+            reward = -(error_y1 + error_y2) - abs(d_input)
 
         else:
             raise ValueError('Improper type selected')
@@ -547,12 +547,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    q = np.loadtxt("Q_Matrix.txt")
-    t = np.loadtxt("T_Matrix.txt")
-    nt = np.loadtxt("NT_Matrix.txt")
-
-    rl.user_matrices(q, t, nt)
-    del q, t, nt, actions
+    # q = np.loadtxt("Q_Matrix.txt")
+    # t = np.loadtxt("T_Matrix.txt")
+    # nt = np.loadtxt("NT_Matrix.txt")
+    #
+    # rl.user_matrices(q, t, nt)
+    # del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -573,7 +573,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 501
+    episodes = 2001
     rlist = []
 
     for episode in range(episodes):
@@ -614,7 +614,7 @@ if __name__ == "__main__":
 
             # Actuator Faults
             if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
 
             # RL Controls
             if 150 < t:
@@ -633,7 +633,7 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=True,
                                                       economics='mixed')
 
             # RL Feedback

@@ -4,6 +4,8 @@ Contextual Bandits Code
 Q(n + 1) = Q(n) + a(R(n) + Q(n)), where Q is f(x, u)
 Bias correction for constant step size: B(n) = a / o(n), where o(n) = o(n - 1) + a(1 - o(n - 1)), with o(0) = 0
 
+Current set-up is based on position rather than velocity.
+
 
 By: Rui Nian
 
@@ -68,34 +70,57 @@ class ContextualBandits:
     def __init__(self, states, actions, epsilon=0.5, lr=0.5):
         self.states = states
         self.actions = actions
-        self.epsilon = epsilon
-        self.lr = lr
+        self.epsilon0 = epsilon
+        self.lr0 = lr
 
         # State-Action-Value numbers
-        self.Q = np.zeros((len(self.states), len(self.actions)))
+        self.Q = np.random.uniform(-0.1, 0.1, size=(len(self.states), len(self.actions)))
         self.T = np.zeros(self.Q.shape)
 
         # Memory for s and a for updates
         self.s = None
         self.a = None
 
+        # Memory for epsilon and lr updates
+        self.epsilon = None
+        self.lr = None
+
     def action_selection(self, state, ep_greedy=False, no_decay=5, min_epsilon=0.001):
 
-        state = self.state_detection(cur_state=state)
+        state_index = self.state_detection(cur_state=state)
 
-        action = self.rargmax(self.Q[state, :])
+        action_index = self.rargmax(self.Q[state_index, :])
 
         if ep_greedy:
-            self.epsilon_update(no_decay=no_decay, sa_pair=self.T[state, action], min_eps_rate=min_epsilon)
+            self.epsilon_update(no_decay=no_decay, sa_pair=self.T[state_index, action_index], min_eps_rate=min_epsilon)
+        else:
+            self.epsilon = 0
+
+        num = np.random.uniform(0, 1)
+        if num < self.epsilon:
+            action_index = np.random.uniform(0, len(self.actions))
+        else:
+            pass
 
         # Memory for s and a for updates
-        self.s = state
-        self.a = action
+        self.s = state_index
+        self.a = action_index
+
+        # Perform action
+        action = self.actions[action_index]
 
         return action
 
-    def value_update(self, state, action):
-        pass
+    def value_update(self, reward, no_decay=5):
+
+        # Learning rate update
+        self.lr_update(no_decay=no_decay, sa_pair=self.T[self.s, self.a], min_learn_rate=0.001)
+
+        # Update the state-action-value
+        self.Q[self.s, self.a] = self.Q[self.s, self.a] + self.lr * (reward - self.Q[self.s, self.a])
+
+        # Update the amount of times that state-action-value is visited
+        self.T[self.s, self.a] += 1
 
     def state_detection(self, cur_state):
         """
@@ -151,16 +176,40 @@ class ContextualBandits:
         if sa_pair < no_decay:
             pass
         else:
-            self.epsilon = self.epsilon_0 / (1 + (sa_pair**(1/12) - 1))
+            self.epsilon = self.epsilon0 / (1 + (sa_pair**(1/12) - 1))
 
         self.epsilon = max(self.epsilon, min_eps_rate)
+
+    def lr_update(self, no_decay, sa_pair, min_learn_rate=0.001):
+
+        # During no decay period
+        if sa_pair < no_decay:
+            pass
+
+        # Decaying learning rate
+        else:
+            self.lr = self.lr0 / (sa_pair - no_decay + 1)
+
+        self.lr = max(self.lr, min_learn_rate)
+
+
+class NumberGame:
+
+    def __init__(self):
+        pass
+
+    def step(self):
+        pass
+
+    def reward(self):
+        pass
+
+    def reset(self):
+        pass
 
 
 if __name__ == "__main__":
 
-    bandit = ContextualBandits(states=[-2, -1, 0, 1, 2], actions=[-1, 0, 1])
+    Bandit = ContextualBandits(states=[-2, -1, 0, 1, 2], actions=[-1, 0, 1])
 
-    bandit.action_selection(-1.6)
-
-
-
+    Action = Bandit.action_selection(-1.6)
