@@ -534,12 +534,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    # q = np.loadtxt("Q_Matrix.txt")
-    # t = np.loadtxt("T_Matrix.txt")
-    # nt = np.loadtxt("NT_Matrix.txt")
-    #
-    # rl.user_matrices(q, t, nt)
-    # del q, t, nt, actions
+    q = np.loadtxt("Q_Matrix.txt")
+    t = np.loadtxt("T_Matrix.txt")
+    nt = np.loadtxt("NT_Matrix.txt")
+
+    rl.user_matrices(q, t, nt)
+    del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -560,7 +560,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1001
+    episodes = 1
     rlist = []
 
     for episode in range(episodes):
@@ -580,8 +580,8 @@ if __name__ == "__main__":
         action_list = [set_point2]
 
         # Valve stuck position
-        valve_pos = np.random.uniform(7, 15)
-        # valve_pos = 12
+        # valve_pos = np.random.uniform(7, 15)
+        valve_pos = 13.5
 
         for t in range(7, env.Nsim + 1):
 
@@ -607,7 +607,7 @@ if __name__ == "__main__":
                 if t % rl.eval_period == 0:
                     state, action = rl.ucb_action_selection([env.y[t-1, 0] - set_point1, env.y[t-1, 1] - set_point2])
                     action, action_index = rl.action_selection(state, action, action_list[-1], no_decay=25,
-                                                               ep_greedy=True, time=t, min_eps_rate=0.01)
+                                                               ep_greedy=False, time=t, min_eps_rate=0.01)
                     action_list.append(action)
 
             if 170 < t and t % 4 == 0:

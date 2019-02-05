@@ -65,15 +65,34 @@ class ContextualBandits:
     def __str__(self):
         return "Contextual Bandit Agent."
 
-    def __init__(self):
+    def __init__(self, states, actions, epsilon=0.5, lr=0.5):
         self.states = states
         self.actions = actions
+        self.epsilon = epsilon
+        self.lr = lr
 
         # State-Action-Value numbers
-        self.Q = np.zeros(len(self.states), len(self.actions))
+        self.Q = np.zeros((len(self.states), len(self.actions)))
+        self.T = np.zeros(self.Q.shape)
 
-    def action_selection(self):
-        pass
+        # Memory for s and a for updates
+        self.s = None
+        self.a = None
+
+    def action_selection(self, state, ep_greedy=False, no_decay=5, min_epsilon=0.001):
+
+        state = self.state_detection(cur_state=state)
+
+        action = self.rargmax(self.Q[state, :])
+
+        if ep_greedy:
+            self.epsilon_update(no_decay=no_decay, sa_pair=self.T[state, action], min_eps_rate=min_epsilon)
+
+        # Memory for s and a for updates
+        self.s = state
+        self.a = action
+
+        return action
 
     def value_update(self, state, action):
         pass
@@ -82,20 +101,23 @@ class ContextualBandits:
         """
         Description
              -----
-
+                Detects the current state of the system.  Because this is a discretized problem, the continuous state
+                must be translated to the closest discrete state.
 
 
         Inputs
              -----
+                cur_state: The current value of the state
 
 
 
         Returns
              -----
+                state: The state index from the Q matrix.
 
         """
 
-        if type(cur_state) == np.float64:
+        if type(cur_state) == np.float64 or float:
 
             state = min(self.states, key=lambda x_current: abs(x_current - cur_state))
             state = self.states.index(state)
@@ -109,7 +131,36 @@ class ContextualBandits:
 
         return state
 
+    @staticmethod
+    def rargmax(vector):
+        """
+        Random argmax
 
+        vector: input of numbers
+
+        return: Index of largest number, breaking ties randomly
+        """
+
+        m = np.amax(vector)
+        indices = np.nonzero(vector == m)[0]
+
+        return random.choice(indices)
+
+    def epsilon_update(self, no_decay, sa_pair, min_eps_rate=0.001):
+
+        if sa_pair < no_decay:
+            pass
+        else:
+            self.epsilon = self.epsilon_0 / (1 + (sa_pair**(1/12) - 1))
+
+        self.epsilon = max(self.epsilon, min_eps_rate)
+
+
+if __name__ == "__main__":
+
+    bandit = ContextualBandits(states=[-2, -1, 0, 1, 2], actions=[-1, 0, 1])
+
+    bandit.action_selection(-1.6)
 
 
 
