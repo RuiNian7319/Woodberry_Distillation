@@ -517,22 +517,29 @@ if __name__ == "__main__":
                            epsilon=0.2, doe=1.2, eval_period=30)
 
     # Building states for the problem, states will be the tracking errors
-    states = np.linspace(-20, 20, 41)
+    states = []
+
+    rl.x1 = np.linspace(-10, 10, 21)
+    rl.x2 = np.linspace(-10, 10, 21)
+
+    for x1 in rl.x1:
+        for x2 in rl.x2:
+            states.append([x1, x2])
 
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.linspace(-15, 15, 31)
+    actions = np.linspace(-5, 5, 11)
 
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    q = np.loadtxt("Q_Matrix.txt")
-    t = np.loadtxt("T_Matrix.txt")
-    nt = np.loadtxt("NT_Matrix.txt")
-
-    rl.user_matrices(q, t, nt)
-    del q, t, nt, actions
+    # q = np.loadtxt("Q_Matrix.txt")
+    # t = np.loadtxt("T_Matrix.txt")
+    # nt = np.loadtxt("NT_Matrix.txt")
+    #
+    # rl.user_matrices(q, t, nt)
+    # del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -553,7 +560,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1
+    episodes = 1001
     rlist = []
 
     for episode in range(episodes):
@@ -573,8 +580,8 @@ if __name__ == "__main__":
         action_list = [set_point2]
 
         # Valve stuck position
-        # valve_pos = np.random.uniform(7, 15)
-        valve_pos = 12
+        valve_pos = np.random.uniform(7, 15)
+        # valve_pos = 12
 
         for t in range(7, env.Nsim + 1):
 
@@ -593,14 +600,14 @@ if __name__ == "__main__":
 
             # Actuator Faults
             if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
 
             # RL Controls
             if 150 < t:
                 if t % rl.eval_period == 0:
-                    state, action = rl.ucb_action_selection(env.y[t - 1, 0] - set_point1)
+                    state, action = rl.ucb_action_selection([env.y[t-1, 0] - set_point1, env.y[t-1, 1] - set_point2])
                     action, action_index = rl.action_selection(state, action, action_list[-1], no_decay=25,
-                                                               ep_greedy=False, time=t, min_eps_rate=0.01)
+                                                               ep_greedy=True, time=t, min_eps_rate=0.01)
                     action_list.append(action)
 
             if 170 < t and t % 4 == 0:
@@ -610,12 +617,12 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=True,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
                                                       economics='mixed')
 
             # RL Feedback
             if t == rl.eval_feedback and t > 150:
-                rl.matrix_update(action_index, Reward, state, env.y[t, 0] - set_point1, 5)
+                rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5)
                 tot_reward = tot_reward + Reward
 
         rlist.append(tot_reward)
