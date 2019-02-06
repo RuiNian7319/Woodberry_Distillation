@@ -82,8 +82,8 @@ class ContextualBandits:
         self.a = None
 
         # Memory for epsilon and lr updates
-        self.epsilon = None
-        self.lr = None
+        self.epsilon = self.epsilon0
+        self.lr = self.lr0
 
     def action_selection(self, state, ep_greedy=False, no_decay=5, min_epsilon=0.001):
 
@@ -195,21 +195,73 @@ class ContextualBandits:
 
 class NumberGame:
 
-    def __init__(self):
-        pass
+    def __init__(self, nsim):
+        self.Nsim = nsim
 
-    def step(self):
-        pass
+        # State trajectory
+        self.x = np.zeros(self.Nsim)
 
-    def reward(self):
-        pass
+    def step(self, action, t):
+        self.x[t] = np.random.uniform(-10, 10)
+
+        done = False
+
+        if t > 20:
+            self.x[t] = 25
+
+            if action == 1:
+                done = True
+
+        reward = self.reward_calc(action, t)
+
+        next_state = deepcopy(self.x[t])
+
+        return next_state, reward, done
+
+    def reward_calc(self, action, t):
+
+        if -10 < self.x[t] < 10:
+            if action == 0:
+                reward = 0
+            elif action == 1:
+                reward = -1
+            else:
+                raise ValueError('Improper action')
+        else:
+            if action == 0:
+                reward = -1
+            elif action == 1:
+                reward = 1
+            else:
+                raise ValueError('Improper action')
+
+        return reward
 
     def reset(self):
-        pass
+        self.x = np.zeros(self.Nsim)
 
 
 if __name__ == "__main__":
 
-    Bandit = ContextualBandits(states=[-2, -1, 0, 1, 2], actions=[-1, 0, 1])
+    # Build agent
+    Bandit = ContextualBandits(states=list(np.linspace(-11, 11, 23)), actions=[0, 1])
 
-    Action = Bandit.action_selection(-1.6)
+    # Build Environment
+    env = NumberGame(nsim=500)
+
+    episodes = 500
+
+    for episode in range(episodes):
+
+        env.reset()
+
+        for step in range(env.Nsim):
+            Action = Bandit.action_selection(env.x[step])
+
+            State, Reward, Done = env.step(Action, step)
+
+            Bandit.value_update(Reward)
+
+            if Done:
+                print(step)
+                break
