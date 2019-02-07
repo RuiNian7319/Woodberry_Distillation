@@ -212,18 +212,19 @@ class NumberGame:
         self.Nsim = nsim
 
         # State trajectory
-        self.x = np.zeros((self.Nsim, 2))
+        # self.x = np.zeros((self.Nsim, 2))
+        self.x = np.loadtxt('contextual_bandit_test.csv').T
 
     def step(self, action, t):
-        self.x[t, :] = [np.random.uniform(-3, 3), np.random.uniform(2, 5)]
-
+        # self.x[t, :] = [np.random.uniform(0, 5), np.random.uniform(2, 5)]
+        #
         done = False
-
-        if t > 20:
-            self.x[t, :] = [np.random.uniform(-3, 3), np.random.uniform(-1, 1)]
-
-            if action == 1:
-                done = True
+        #
+        # if t > 20:
+        #     self.x[t, :] = [np.random.uniform(0, 3), np.random.uniform(0, 4)]
+        #
+        #     if action == 1:
+        #         done = True
 
         reward = self.reward_calc(action, t)
 
@@ -233,15 +234,7 @@ class NumberGame:
 
     def reward_calc(self, action, t):
 
-        if abs(self.x[t, 1]) > 1:
-            if action == 0:
-                reward = 0
-            elif action == 1:
-                reward = -1
-            else:
-                raise ValueError('Improper action')
-
-        else:
+        if t > 1000:
             if action == 0:
                 reward = -1
             elif action == 1:
@@ -249,18 +242,55 @@ class NumberGame:
             else:
                 raise ValueError('Improper action')
 
+        else:
+            if action == 0:
+                reward = 0
+            elif action == 1:
+                reward = -1
+            else:
+                raise ValueError('Improper action')
+
+        # # Actuator not stuck
+        # if abs(self.x[t, 1]) > 5:
+        #     if action == 0:
+        #         reward = 0
+        #     elif action == 1:
+        #         reward = -1
+        #     else:
+        #         raise ValueError('Improper action')
+        #
+        # # If actuator didn't move, but input also didn't move...
+        # elif abs(self.x[t, 0]) < 4:
+        #     if action == 0:
+        #         reward = 0
+        #     elif action == 1:
+        #         reward = -1
+        #     else:
+        #         raise ValueError('Improper action')
+        #
+        # else:
+        #     if action == 0:
+        #         reward = -1
+        #     elif action == 1:
+        #         reward = 1
+        #     else:
+        #         raise ValueError('Improper action')
+
         return reward
 
     def reset(self):
-        self.x = np.zeros((self.Nsim, 2))
+        # self.x = np.zeros((self.Nsim, 2))
+        self.x = np.loadtxt('contextual_bandit_test.csv').T
 
 
 if __name__ == "__main__":
 
     States = []
 
-    States1 = np.linspace(-3, 3, 10)
-    States2 = np.linspace(0, 5, 6)
+    # Changes of PID inputs and process outputs in absolute values
+    States1 = np.linspace(0, 12, 13)
+    States2 = np.linspace(0, 9, 4)
+
     for x1 in States1:
         for x2 in States2:
             States.append([x1, x2])
@@ -275,13 +305,13 @@ if __name__ == "__main__":
     Bandit.x2 = States2
 
     # Load the Q and T matrices
-    # Bandit.Q = np.loadtxt('Q_matrix.csv')
-    # Bandit.T = np.loadtxt('T_matrix.csv')
+    Bandit.Q = np.loadtxt('Q_matrix.csv')
+    Bandit.T = np.loadtxt('T_matrix.csv')
 
     # Build Environment
-    env = NumberGame(nsim=25)
+    env = NumberGame(nsim=1198)
 
-    episodes = 10001
+    episodes = 1
 
     for episode in range(1, episodes):
 

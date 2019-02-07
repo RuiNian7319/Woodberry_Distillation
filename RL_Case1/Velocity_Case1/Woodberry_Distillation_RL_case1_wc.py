@@ -589,21 +589,21 @@ if __name__ == "__main__":
             #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 3, size=(1, 4))
 
             # Actuator Faults
-            if 150 < t:
+            if 5000 < t:
                 env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
 
             # RL Controls
-            if 150 < t:
-                if t % rl.eval_period == 0:
-                    state, action = rl.ucb_action_selection(env.y[t - 1, 0] - set_point1)
-                    action, action_index = rl.action_selection(state, action, action_list[-1], no_decay=25,
-                                                               ep_greedy=False, time=t, min_eps_rate=0.01)
-                    # To see how well the PID is tracking RL
-                    action_list.append(action)
-                    time_list.append(t)
-
-            if 170 < t and t % 4 == 0:
-                input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
+            # if 150 < t:
+            #     if t % rl.eval_period == 0:
+            #         state, action = rl.ucb_action_selection(env.y[t - 1, 0] - set_point1)
+            #         action, action_index = rl.action_selection(state, action, action_list[-1], no_decay=25,
+            #                                                    ep_greedy=False, time=t, min_eps_rate=0.01)
+            #         # To see how well the PID is tracking RL
+            #         action_list.append(action)
+            #         time_list.append(t)
+            #
+            # if 170 < t and t % 4 == 0:
+            #     input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Generate input tuple
             control_input = np.array([[input_1, input_2]])
@@ -613,13 +613,13 @@ if __name__ == "__main__":
                                                       economics='distillate')
 
             if t % 5 == 0 and t != 0:
-                deltaU.append(PID1.u[t] - PID1.u[t - 10])
-                deltaY.append(env.y[t, 0] - env.y[t - 5, 0])
+                deltaU.append(abs(PID1.u[t] - PID1.u[t - 10]))
+                deltaY.append(abs(env.y[t, 0] - env.y[t - 5, 0]))
 
             # RL Feedback
-            if t == rl.eval_feedback and t > 150:
-                rl.matrix_update(action_index, Reward, state, env.y[t, 0] - set_point1, 5)
-                tot_reward = tot_reward + Reward
+            # if t == rl.eval_feedback and t > 150:
+            #     rl.matrix_update(action_index, Reward, state, env.y[t, 0] - set_point1, 5)
+            #     tot_reward = tot_reward + Reward
 
         rlist.append(tot_reward)
 
