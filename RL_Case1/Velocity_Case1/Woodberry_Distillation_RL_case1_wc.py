@@ -32,7 +32,7 @@ import sys
 sys.path.insert(0, '/home/rui/Documents/IOL_Fault_Tolerant_Control/Woodberry_Distillation')
 sys.path.insert(0, '/Users/ruinian/Documents/MATLAB/Woodberry_Distillation')
 
-from RL_Module_Velocity import ReinforceLearning
+from RL_Module_Velocity_SMDP import ReinforceLearning
 
 
 class WoodBerryDistillation:
@@ -249,6 +249,11 @@ class WoodBerryDistillation:
 
         else:
             raise ValueError('Improper type selected')
+
+        """
+        Semi-Markov Decision Process of the reward function
+        """
+
 
         return reward
 
