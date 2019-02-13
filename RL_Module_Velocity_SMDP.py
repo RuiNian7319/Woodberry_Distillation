@@ -112,6 +112,8 @@ class ReinforceLearning:
         self.T = t
         self.NT = nt
 
+        print('Loaded Q, T, and NT matrices successfully!')
+
         # Ensure the matrices have proper dimensions so RL can run
         assert(self.Q.shape == (len(self.states), len(self.actions)))
         assert(self.T.shape == (len(self.states), len(self.actions)))
