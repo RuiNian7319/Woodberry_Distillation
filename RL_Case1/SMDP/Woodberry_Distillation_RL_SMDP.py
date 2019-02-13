@@ -545,7 +545,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1
+    episodes = 501
     rlist = []
 
     for episode in range(episodes):
@@ -574,7 +574,7 @@ if __name__ == "__main__":
 
         # Valve stuck position
         if episode % 10 == 0:
-            valve_pos = 11
+            valve_pos = 12
         else:
             valve_pos = np.random.uniform(7, 13.5)
 
@@ -601,9 +601,9 @@ if __name__ == "__main__":
             # RL Controls
             if 150 < t:
                 if t % rl.eval_period == 0:
-                    state, action = rl.ucb_action_selection(env.y[t - 1, 0] - set_point1)
-                    action, action_index = rl.action_selection(state, action, action_list[-1], no_decay=25,
-                                                               ep_greedy=False, time=t, min_eps_rate=0.01)
+                    state, action, action_index = rl.action_selection(env.y[t - 1, 0] - set_point1, action_list[-1],
+                                                                      no_decay=25, ep_greedy=True, time=t,
+                                                                      min_eps_rate=0.01)
                     # To see how well the PID is tracking RL
                     action_list.append(action)
                     time_list.append(t)
