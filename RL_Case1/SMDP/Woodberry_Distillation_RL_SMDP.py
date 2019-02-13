@@ -519,12 +519,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    q = np.loadtxt("Q_Matrix.txt")
-    t = np.loadtxt("T_Matrix.txt")
-    nt = np.loadtxt("NT_Matrix.txt")
-
-    rl.user_matrices(q, t, nt)
-    del q, t, nt, actions
+    # q = np.loadtxt("Q_Matrix.txt")
+    # t = np.loadtxt("T_Matrix.txt")
+    # nt = np.loadtxt("NT_Matrix.txt")
+    #
+    # rl.user_matrices(q, t, nt)
+    # del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -545,7 +545,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 501
+    episodes = 201
     rlist = []
 
     for episode in range(episodes):
@@ -581,7 +581,7 @@ if __name__ == "__main__":
         for t in range(7, env.Nsim + 1):
 
             # PID Evaluate
-            if t % 4 == 0:  # and t < 170:
+            if t % 4 == 0 and t < 170:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
@@ -618,6 +618,12 @@ if __name__ == "__main__":
             next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=False,
                                                       economics='distillate')
 
+            # Reached steady state given by RL or system did not reach the state in 30 seconds,
+            # if t - next_evaluation > 10 and \
+            #         (next_state[1] * 0.995 < action < next_state[1] * 1.005 or (t - next_evaluation > 30)):
+            #
+            #     next_evaluation = t
+
             # Append cumulative reward
             cumu_reward.append(Reward)
 
@@ -633,8 +639,12 @@ if __name__ == "__main__":
                 reward_rate = np.average(cumu_reward)
                 cumu_reward = []
 
+                # Update RL Matrices
                 rl.matrix_update(action_index, reward_rate, state, env.y[t, 0] - set_point1, 5)
                 tot_reward = tot_reward + reward_rate
+
+                # Define eval period for next state
+                # rl.eval_period = t + 1
 
         rlist.append(tot_reward)
 
@@ -645,6 +655,7 @@ if __name__ == "__main__":
             print("Episode {} | Episode Reward {}".format(episode, tot_reward))
 
     env.plots(timestart=50, timestop=6000)
+
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
     # plt.show()
     #
