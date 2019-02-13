@@ -519,12 +519,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    # q = np.loadtxt("Q_Matrix.txt")
-    # t = np.loadtxt("T_Matrix.txt")
-    # nt = np.loadtxt("NT_Matrix.txt")
-    #
-    # rl.user_matrices(q, t, nt)
-    # del q, t, nt, actions
+    q = np.loadtxt("Q_Matrix.txt")
+    t = np.loadtxt("T_Matrix.txt")
+    nt = np.loadtxt("NT_Matrix.txt")
+
+    rl.user_matrices(q, t, nt)
+    del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -545,7 +545,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 201
+    episodes = 1
     rlist = []
 
     for episode in range(episodes):
@@ -558,12 +558,15 @@ if __name__ == "__main__":
         input_1 = env.u[0, 0]
         input_2 = env.u[0, 1]
 
-        tot_reward = 0
+        tot_reward = []
         state = 0
         action = set_point2
         action_index = 0
         action_list = [set_point2]
         time_list = [0]
+
+        tracker = 0
+        should_eval = False
 
         # Fault Detection
         # deltaU = []
@@ -600,9 +603,17 @@ if __name__ == "__main__":
 
             # RL Controls
             if 150 < t:
-                if t % rl.eval_period == 0:
+                if t % rl.eval_period == 0 or rl.next_eval:
+
+                    rl.next_eval = False
+
+                    tracker += 1
+
+                    # RL evaluation time
+                    rl.eval = t
+
                     state, action, action_index = rl.action_selection(env.y[t - 1, 0] - set_point1, action_list[-1],
-                                                                      no_decay=25, ep_greedy=True, time=t,
+                                                                      no_decay=25, ep_greedy=False, time=t,
                                                                       min_eps_rate=0.01)
                     # To see how well the PID is tracking RL
                     action_list.append(action)
@@ -619,10 +630,8 @@ if __name__ == "__main__":
                                                       economics='distillate')
 
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
-            # if t - next_evaluation > 10 and \
-            #         (next_state[1] * 0.995 < action < next_state[1] * 1.005 or (t - next_evaluation > 30)):
-            #
-            #     next_evaluation = t
+            if next_state[1] * 0.997 < action < next_state[1] * 1.003 and t - rl.eval > 15:
+                rl.eval_feedback = t
 
             # Append cumulative reward
             cumu_reward.append(Reward)
@@ -640,19 +649,19 @@ if __name__ == "__main__":
                 cumu_reward = []
 
                 # Update RL Matrices
-                rl.matrix_update(action_index, reward_rate, state, env.y[t, 0] - set_point1, 5)
-                tot_reward = tot_reward + reward_rate
+                rl.matrix_update(action_index, reward_rate, state, env.y[t, 0] - set_point1, 5, tau)
+                tot_reward.append(reward_rate)
 
                 # Define eval period for next state
-                # rl.eval_period = t + 1
+                rl.next_eval = True
 
-        rlist.append(tot_reward)
+        rlist.append(np.average(tot_reward))
 
         # Autosave Q, T, and NT matrices
         rl.autosave(episode, 100)
 
         if episode % 10 == 0:
-            print("Episode {} | Episode Reward {}".format(episode, tot_reward))
+            print("Episode {} | Episode Reward {}".format(episode, np.average(tot_reward)))
 
     env.plots(timestart=50, timestop=6000)
 
