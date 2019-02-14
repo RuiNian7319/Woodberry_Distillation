@@ -519,12 +519,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    # q = np.loadtxt("Q_Matrix.txt")
-    # t = np.loadtxt("T_Matrix.txt")
-    # nt = np.loadtxt("NT_Matrix.txt")
-    #
-    # rl.user_matrices(q, t, nt)
-    # del q, t, nt, actions
+    q = np.loadtxt("Q_Matrix.txt")
+    t = np.loadtxt("T_Matrix.txt")
+    nt = np.loadtxt("NT_Matrix.txt")
+
+    rl.user_matrices(q, t, nt)
+    del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -545,7 +545,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 3001
+    episodes = 1
     rlist = []
 
     for episode in range(episodes):
@@ -595,17 +595,17 @@ if __name__ == "__main__":
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Set-point change
-            # if t == 100:
-            #     set_point1 = 65
-            #     set_point2 += 2
+            if t == 1000:
+                set_point1 = 85
+                # set_point2 += 2
 
             # Disturbance
-            # if 350 < t < 370:
-            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 3, size=(1, 4))
+            if 3500 < t < 3520:
+                env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 2, size=(1, 4))
 
             # Actuator Faults
             if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
 
             # RL Controls
             if 150 < t:
@@ -619,7 +619,7 @@ if __name__ == "__main__":
                     rl.eval = t
 
                     state, action, action_index = rl.action_selection(env.y[t - 1, 0] - set_point1, action_list[-1],
-                                                                      no_decay=25, ep_greedy=True, time=t,
+                                                                      no_decay=25, ep_greedy=False, time=t,
                                                                       min_eps_rate=0.01)
                     # To see how well the PID is tracking RL
                     action_list.append(action)
@@ -632,11 +632,11 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=False,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=True,
                                                       economics='distillate')
 
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
-            if next_state[1] * 0.997 < action < next_state[1] * 1.003 and t - rl.eval > 15:
+            if next_state[1] * 0.99 < action < next_state[1] * 1.01 and t - rl.eval > 12:
                 rl.eval_feedback = t
                 tau = t - rl.eval
 
@@ -662,13 +662,12 @@ if __name__ == "__main__":
                 # Define eval period for next state
                 rl.next_eval = True
 
-        rlist.append(np.average(tot_reward))
-
         # Autosave Q, T, and NT matrices
         rl.autosave(episode, 100)
 
         if episode % 10 == 0:
             print("Episode {} | Episode Reward {}".format(episode, np.average(tot_reward)))
+            rlist.append(np.average(tot_reward))
 
     env.plots(timestart=50, timestop=6000)
 
