@@ -509,22 +509,22 @@ if __name__ == "__main__":
                            epsilon=0.2, doe=1.2, eval_period=30)
 
     # Building states for the problem, states will be the tracking errors
-    states = np.linspace(-30, 10, 41)
+    states = np.linspace(-30, 10, 201)
 
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.linspace(-15, 15, 31)
+    actions = np.linspace(-15, 15, 121)
 
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    q = np.loadtxt("Q_Matrix.txt")
-    t = np.loadtxt("T_Matrix.txt")
-    nt = np.loadtxt("NT_Matrix.txt")
-
-    rl.user_matrices(q, t, nt)
-    del q, t, nt, actions
+    # q = np.loadtxt("Q_Matrix.txt")
+    # t = np.loadtxt("T_Matrix.txt")
+    # nt = np.loadtxt("NT_Matrix.txt")
+    #
+    # rl.user_matrices(q, t, nt)
+    # del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -545,7 +545,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1
+    episodes = 3001
     rlist = []
 
     for episode in range(episodes):
@@ -566,7 +566,6 @@ if __name__ == "__main__":
         time_list = [0]
 
         tracker = 0
-        should_eval = False
 
         # Fault Detection
         # deltaU = []
@@ -581,7 +580,14 @@ if __name__ == "__main__":
         else:
             valve_pos = np.random.uniform(7, 13.5)
 
+        """
+        Loop Description
+           ---
+              Loop over one episode
+        """
         for t in range(7, env.Nsim + 1):
+
+            tau = rl.eval_period
 
             # PID Evaluate
             if t % 4 == 0 and t < 170:
@@ -613,7 +619,7 @@ if __name__ == "__main__":
                     rl.eval = t
 
                     state, action, action_index = rl.action_selection(env.y[t - 1, 0] - set_point1, action_list[-1],
-                                                                      no_decay=25, ep_greedy=False, time=t,
+                                                                      no_decay=25, ep_greedy=True, time=t,
                                                                       min_eps_rate=0.01)
                     # To see how well the PID is tracking RL
                     action_list.append(action)
@@ -632,6 +638,7 @@ if __name__ == "__main__":
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
             if next_state[1] * 0.997 < action < next_state[1] * 1.003 and t - rl.eval > 15:
                 rl.eval_feedback = t
+                tau = t - rl.eval
 
             # Append cumulative reward
             cumu_reward.append(Reward)

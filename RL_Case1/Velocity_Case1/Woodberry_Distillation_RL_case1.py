@@ -558,7 +558,7 @@ if __name__ == "__main__":
         input_1 = env.u[0, 0]
         input_2 = env.u[0, 1]
 
-        tot_reward = 0
+        tot_reward = []
         state = 0
         action = set_point2
         action_index = 0
@@ -590,7 +590,7 @@ if __name__ == "__main__":
 
             # Actuator Faults
             if 150 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
 
             # RL Controls
             if 150 < t:
@@ -609,7 +609,7 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=True,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=False,
                                                       economics='distillate')
 
             if t % 5 == 0 and t != 0:
@@ -619,15 +619,15 @@ if __name__ == "__main__":
             # RL Feedback
             if t == rl.eval_feedback and t > 150:
                 rl.matrix_update(action_index, Reward, state, env.y[t, 0] - set_point1, 5)
-                tot_reward = tot_reward + Reward
+                tot_reward.append(Reward)
 
-        rlist.append(tot_reward)
+        rlist.append(np.average(tot_reward))
 
         # Autosave Q, T, and NT matrices
         # rl.autosave(episode, 100)
 
         if episode % 10 == 0:
-            print("Episode {} | Current Reward {}".format(episode, tot_reward))
+            print("Episode {} | Current Reward {}".format(episode, np.average(tot_reward)))
 
     env.plots(timestart=50, timestop=6000)
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
