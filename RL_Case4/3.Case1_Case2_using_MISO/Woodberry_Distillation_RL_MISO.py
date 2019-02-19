@@ -32,7 +32,7 @@ import sys
 sys.path.insert(0, '/home/rui/Documents/IOL_Fault_Tolerant_Control/Woodberry_Distillation')
 sys.path.insert(0, '/Users/ruinian/Documents/MATLAB/Woodberry_Distillation')
 
-from RL_Module_Velocity import ReinforceLearning
+from RL_Module_Velocity_MIMO_SMDP import ReinforceLearning
 
 
 class WoodBerryDistillation:
@@ -268,7 +268,7 @@ class WoodBerryDistillation:
             error_y2 = w_y2 * np.square(abs(self.y[time, 1] - setpoint[1]))
 
             # Tracking error + change in input cost
-            reward = -(error_y1 + error_y2) - abs(d_input)
+            reward = -(error_y1 + error_y2) - (abs(d_input) * 5)
 
         else:
             raise ValueError('Improper type selected')
@@ -534,8 +534,13 @@ if __name__ == "__main__":
     # Building states for the problem, states will be the tracking errors
     states = []
 
-    rl.x1 = np.linspace(-10, 10, 21)
-    rl.x2 = np.linspace(-10, 10, 21)
+    rl.x1 = np.zeros(15)
+    rl.x1[0:3] = np.linspace(-5, 2, 3)
+    rl.x1[3:16] = np.linspace(3, 25, 12)
+
+    rl.x2 = np.zeros(15)
+    rl.x2[0:3] = np.linspace(-2, 5, 3)
+    rl.x2[3:16] = np.linspace(6, 25, 12)
 
     for x1 in rl.x1:
         for x2 in rl.x2:
@@ -588,7 +593,7 @@ if __name__ == "__main__":
         input_1 = env.u[0, 0]
         input_2 = env.u[0, 1]
 
-        tot_reward = 0
+        tot_reward = []
         state = 0
         action = set_point2
         action_index = 0
@@ -599,7 +604,7 @@ if __name__ == "__main__":
         if episode % 10 == 0:
             valve_pos = 12
         else:
-            valve_pos = np.random.uniform(7, 13.5)
+            valve_pos = 12  # np.random.uniform(7, 13.5)
 
         for t in range(7, env.Nsim + 1):
 
@@ -622,11 +627,21 @@ if __name__ == "__main__":
 
             # RL Controls
             if 150 < t:
-                if t % rl.eval_period == 0:
-                    state, action = rl.ucb_action_selection([env.y[t-1, 0] - set_point1, env.y[t-1, 1] - set_point2])
-                    action, action_index = rl.action_selection(state, action, env.action_list[-1], no_decay=25,
-                                                               ep_greedy=False, time=t, min_eps_rate=0.01)
+                if t % rl.eval_period == 0 or rl.next_eval:
 
+                    rl.next_eval = False
+
+                    # RL evaluation time
+                    rl.eval = t
+
+                    # state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
+                    #                                                    env.y[t-1, 1] - set_point2],
+                    #                                                   env.action_list[-1], no_decay=25,
+                    #                                                   ep_greedy=False, time=t, min_eps_rate=0.01)
+                    #
+                    action = 21
+
+                    # To see how well the PID is tracking RL
                     env.action_list.append(action)
                     env.time_list.append(t)
 
@@ -640,18 +655,25 @@ if __name__ == "__main__":
             next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
                                                       economics='mixed', w_y1=0.8, w_y2=0.2)
 
-            # RL Feedback
-            if t == rl.eval_feedback and t > 150:
-                rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5)
-                tot_reward = tot_reward + Reward
+            if t > 170:
+                tot_reward.append(Reward)
 
-        rlist.append(tot_reward)
+            # RL Feedback
+            # if t == rl.eval_feedback and t > 150:
+            #
+            #     rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5,
+            #                      min_learn_rate=0.01)
+            #     tot_reward.append(Reward)
+            #
+            #     # Define eval period for next state
+            #     rl.next_eval = True
 
         # Autosave Q, T, and NT matrices
         rl.autosave(episode, 100)
 
         if episode % 10 == 0:
-            print("Episode {} | Current Reward {}".format(episode, tot_reward))
+            print("Episode {} | Current Reward {}".format(episode, np.average(tot_reward)))
+            rlist.append(np.average(tot_reward))
 
     env.plots(timestart=50, timestop=6000)
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
