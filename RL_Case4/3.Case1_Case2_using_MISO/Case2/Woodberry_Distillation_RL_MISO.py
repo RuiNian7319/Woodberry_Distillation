@@ -258,7 +258,7 @@ class WoodBerryDistillation:
         elif economics == 'all':
             error_y1 = np.square(abs(self.y[time, 0] - setpoint[0]))
             error_y2 = np.square(abs(self.y[time, 1] - setpoint[1]))
-            reward = -(error_y1 + error_y2) - d_input
+            reward = -(error_y1 + error_y2) + d_input
 
         elif economics == 'mixed':
 
@@ -549,12 +549,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    q = np.loadtxt("Q_Matrix.txt")
-    t = np.loadtxt("T_Matrix.txt")
-    nt = np.loadtxt("NT_Matrix.txt")
-
-    rl.user_matrices(q, t, nt)
-    del q, t, nt, actions
+    # q = np.loadtxt("Q_Matrix.txt")
+    # t = np.loadtxt("T_Matrix.txt")
+    # nt = np.loadtxt("NT_Matrix.txt")
+    #
+    # rl.user_matrices(q, t, nt)
+    # del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -575,7 +575,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1
+    episodes = 1001
     rlist = []
 
     for episode in range(episodes):
@@ -625,7 +625,7 @@ if __name__ == "__main__":
                 if t % rl.eval_period == 0:
                     state, action = rl.ucb_action_selection([env.y[t-1, 0] - set_point1, env.y[t-1, 1] - set_point2])
                     action, action_index = rl.action_selection(state, action, env.action_list[-1], no_decay=25,
-                                                               ep_greedy=False, time=t, min_eps_rate=0.01)
+                                                               ep_greedy=True, time=t, min_eps_rate=0.01)
 
                     env.action_list.append(action)
                     env.time_list.append(t)
@@ -638,7 +638,7 @@ if __name__ == "__main__":
 
             # Simulate next time
             next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
-                                                      economics='mixed', w_y1=0.8, w_y2=0.2)
+                                                      economics='mixed', w_y1=0, w_y2=1)
 
             # RL Feedback
             if t == rl.eval_feedback and t > 150:
