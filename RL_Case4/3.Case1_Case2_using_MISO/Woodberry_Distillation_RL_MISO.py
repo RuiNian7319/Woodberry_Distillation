@@ -5,6 +5,13 @@ By: Rui Nian
 
 Date of Last Edit: Feb 1st 2019
 
+Optimal for valve stuck at 12:
+        Setpoint_2 = 19
+                y1 = 94.9
+                y2 = 19.0
+
+10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+-175, -158, -144, -131, -120, -111, -104, -99, -96, -94, -95, -98, -102, -109
 
 The MIT License (MIT)
 Copyright © 2019 Rui Nian
@@ -634,12 +641,10 @@ if __name__ == "__main__":
                     # RL evaluation time
                     rl.eval = t
 
-                    # state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
-                    #                                                    env.y[t-1, 1] - set_point2],
-                    #                                                   env.action_list[-1], no_decay=25,
-                    #                                                   ep_greedy=False, time=t, min_eps_rate=0.01)
-                    #
-                    action = 21
+                    state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
+                                                                       env.y[t-1, 1] - set_point2],
+                                                                      env.action_list[-1], no_decay=25,
+                                                                      ep_greedy=False, time=t, min_eps_rate=0.001)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
@@ -659,14 +664,14 @@ if __name__ == "__main__":
                 tot_reward.append(Reward)
 
             # RL Feedback
-            # if t == rl.eval_feedback and t > 150:
-            #
-            #     rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5,
-            #                      min_learn_rate=0.01)
-            #     tot_reward.append(Reward)
-            #
-            #     # Define eval period for next state
-            #     rl.next_eval = True
+            if t == rl.eval_feedback and t > 150:
+
+                rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5,
+                                 min_learn_rate=0.01)
+                tot_reward.append(Reward)
+
+                # Define eval period for next state
+                rl.next_eval = True
 
         # Autosave Q, T, and NT matrices
         rl.autosave(episode, 100)
