@@ -607,6 +607,11 @@ if __name__ == "__main__":
         env.action_list.append(set_point2)
         env.time_list.append(0)
 
+        tracker = 0
+
+        # SMDP Reward tracking
+        cumu_reward = []
+
         # Valve stuck position
         if episode % 10 == 0:
             valve_pos = 12
@@ -614,6 +619,8 @@ if __name__ == "__main__":
             valve_pos = 12  # np.random.uniform(7, 13.5)
 
         for t in range(7, env.Nsim + 1):
+
+            tau = rl.eval_period
 
             if t % 4 == 0 and t < 170:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
@@ -638,6 +645,8 @@ if __name__ == "__main__":
 
                     rl.next_eval = False
 
+                    tracker += 1
+
                     # RL evaluation time
                     rl.eval = t
 
@@ -660,15 +669,24 @@ if __name__ == "__main__":
             next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
                                                       economics='mixed', w_y1=0.8, w_y2=0.2)
 
-            if t > 170:
-                tot_reward.append(Reward)
+            # Reached steady state given by RL or system did not reach the state in 30 seconds,
+            if next_state[1] * 0.99 < action < next_state[1] * 1.01 and t - rl.eval > 12:
+                rl.eval_feedback = t
+                tau = t - rl.eval
+
+            # Append cumulative reward
+            cumu_reward.append(Reward)
 
             # RL Feedback
             if t == rl.eval_feedback and t > 150:
 
+                # Calculate and reset cumulative reward
+                reward_rate = np.average(cumu_reward)
+                cumu_reward = []
+
                 rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5,
                                  min_learn_rate=0.01)
-                tot_reward.append(Reward)
+                tot_reward.append(reward_rate)
 
                 # Define eval period for next state
                 rl.next_eval = True
@@ -681,6 +699,7 @@ if __name__ == "__main__":
             rlist.append(np.average(tot_reward))
 
     env.plots(timestart=50, timestop=6000)
+
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
     # plt.show()
 
