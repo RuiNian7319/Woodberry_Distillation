@@ -124,6 +124,8 @@ class ReinforceLearning:
         assert(self.T.shape == (len(self.states), len(self.actions)))
         assert(self.NT.shape == (len(self.states), len(self.actions)))
 
+        print('Loaded Q, T, and NT matrices successfully!')
+
     """
     Detect current state
     
@@ -183,7 +185,7 @@ class ReinforceLearning:
         min_eps_rate: The minimum epsilon rate.  Default value = 0.001
 
         control: New set point / value for the item being controlled
-        action:  The action preformed at current time
+        action:  Action index preformed at current time
         """
 
         """
@@ -246,7 +248,7 @@ class ReinforceLearning:
 
         self.learning_rate = max(self.learning_rate, min_learn_rate)
 
-    def matrix_update(self, action, rewards, old_state, cur_state, no_decay, min_learn_rate=0.001):
+    def matrix_update(self, action, rewards, old_state, cur_state, no_decay, tau, min_learn_rate=0.001):
         """
         Q-value update
 
@@ -265,9 +267,12 @@ class ReinforceLearning:
         self.learn_rate(no_decay, self.NT[old_state, action], min_learn_rate)
 
         # Update Q matrix using the Q-learning equation
-        self.Q[old_state, action] = self.Q[old_state, action] + self.learning_rate*(rewards + self.discount_factor *
-                                                                                    np.max(self.Q[new_state, :])
-                                                                                    - self.Q[old_state, action])
+        smdp_discount = np.exp(-self.beta * tau)
+        reward_discount = np.divide(1 - smdp_discount, self.beta)
+        self.Q[old_state, action] = self.Q[old_state, action] + self.learning_rate * (reward_discount * rewards +
+                                                                                      smdp_discount *
+                                                                                      np.max(self.Q[new_state, :]) -
+                                                                                      self.Q[old_state, action])
         # Update memory matrix T
         for element in range(self.T.shape[1]):
             if element != action:

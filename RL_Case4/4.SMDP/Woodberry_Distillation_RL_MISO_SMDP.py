@@ -561,12 +561,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    q = np.loadtxt("Q_Matrix.txt")
-    t = np.loadtxt("T_Matrix.txt")
-    nt = np.loadtxt("NT_Matrix.txt")
-
-    rl.user_matrices(q, t, nt)
-    del q, t, nt, actions
+    # q = np.loadtxt("Q_Matrix.txt")
+    # t = np.loadtxt("T_Matrix.txt")
+    # nt = np.loadtxt("NT_Matrix.txt")
+    #
+    # rl.user_matrices(q, t, nt)
+    # del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -587,7 +587,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1
+    episodes = 1001
     rlist = []
 
     for episode in range(episodes):
@@ -620,6 +620,7 @@ if __name__ == "__main__":
 
         for t in range(7, env.Nsim + 1):
 
+            # Maximum possible arrival time
             tau = rl.eval_period
 
             if t % 4 == 0 and t < 170:
@@ -641,7 +642,7 @@ if __name__ == "__main__":
 
             # RL Controls
             if 150 < t:
-                if t % rl.eval_period == 0 or rl.next_eval:
+                if (t % rl.eval_period == 0 or rl.next_eval) and (t - rl.eval > 12):
 
                     rl.next_eval = False
 
@@ -653,7 +654,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
                                                                        env.y[t-1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=False, time=t, min_eps_rate=0.001)
+                                                                      ep_greedy=True, time=t, min_eps_rate=0.001)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
@@ -667,7 +668,7 @@ if __name__ == "__main__":
 
             # Simulate next time
             next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
-                                                      economics='mixed', w_y1=0.8, w_y2=0.2)
+                                                      economics='mixed', w_y1=1.0, w_y2=0.0)
 
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
             if next_state[1] * 0.99 < action < next_state[1] * 1.01 and t - rl.eval > 12:
@@ -685,7 +686,7 @@ if __name__ == "__main__":
                 cumu_reward = []
 
                 rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5,
-                                 min_learn_rate=0.01)
+                                 min_learn_rate=0.0005, tau=tau)
                 tot_reward.append(reward_rate)
 
                 # Define eval period for next state

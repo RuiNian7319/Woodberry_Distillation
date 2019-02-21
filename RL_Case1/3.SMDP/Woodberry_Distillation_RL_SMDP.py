@@ -605,15 +605,17 @@ if __name__ == "__main__":
 
             # Actuator Faults
             if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
 
             # RL Controls
             if 150 < t:
-                if t % rl.eval_period == 0 or rl.next_eval:
+                # If its eval period, or if the arrival time is faster than expected. And evaluation must be 12 t apart
+                if (t % rl.eval_period == 0 or rl.next_eval) and t - rl.eval > 12:
 
                     rl.next_eval = False
 
                     tracker += 1
+                    print(tracker, t)
 
                     # RL evaluation time
                     rl.eval = t
@@ -632,7 +634,7 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=True,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=False,
                                                       economics='distillate')
 
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
