@@ -565,14 +565,14 @@ if __name__ == "__main__":
         action_list = [set_point2]
         time_list = [0]
 
-        tracker = 0
-
         # Fault Detection
         # deltaU = []
         # deltaY = []
 
-        # SMDP Reward tracking
+        # SMDP Reward and arrival time tracking
         cumu_reward = []
+        rl.eval = 0
+        tracker = 0
 
         # Valve stuck position
         if episode % 10 == 0:
@@ -587,6 +587,7 @@ if __name__ == "__main__":
         """
         for t in range(7, env.Nsim + 1):
 
+            # Maximum possible arrival time
             tau = rl.eval_period
 
             # PID Evaluate

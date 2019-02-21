@@ -607,10 +607,10 @@ if __name__ == "__main__":
         env.action_list.append(set_point2)
         env.time_list.append(0)
 
-        tracker = 0
-
         # SMDP Reward tracking
         cumu_reward = []
+        rl.eval = 0
+        tracker = 0
 
         # Valve stuck position
         if episode % 10 == 0:
@@ -642,7 +642,7 @@ if __name__ == "__main__":
 
             # RL Controls
             if 150 < t:
-                if (t % rl.eval_period == 0 or rl.next_eval) and (t - rl.eval > 12):
+                if (t % rl.eval_period == 0 or rl.next_eval) and t - rl.eval > 12:
 
                     rl.next_eval = False
 
@@ -687,6 +687,7 @@ if __name__ == "__main__":
 
                 rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5,
                                  min_learn_rate=0.0005, tau=tau)
+
                 tot_reward.append(reward_rate)
 
                 # Define eval period for next state
