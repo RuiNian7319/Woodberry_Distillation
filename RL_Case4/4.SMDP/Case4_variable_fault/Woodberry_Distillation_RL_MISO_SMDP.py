@@ -541,13 +541,13 @@ if __name__ == "__main__":
     # Building states for the problem, states will be the tracking errors
     states = []
 
-    rl.x1 = np.zeros(15)
-    rl.x1[0:3] = np.linspace(-5, 2, 3)
-    rl.x1[3:16] = np.linspace(3, 25, 12)
+    rl.x1 = np.zeros(20)
+    rl.x1[0:16] = np.linspace(-20, 0, 16)
+    rl.x1[16:20] = np.linspace(2, 12, 4)
 
-    rl.x2 = np.zeros(15)
-    rl.x2[0:3] = np.linspace(-2, 5, 3)
-    rl.x2[3:16] = np.linspace(6, 25, 12)
+    rl.x2 = np.zeros(20)
+    rl.x2[0:3] = np.linspace(-5, 5, 3)
+    rl.x2[3:20] = np.linspace(6, 28, 17)
 
     for x1 in rl.x1:
         for x2 in rl.x2:
@@ -561,12 +561,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    # q = np.loadtxt("Q_Matrix.txt")
-    # t = np.loadtxt("T_Matrix.txt")
-    # nt = np.loadtxt("NT_Matrix.txt")
-    #
-    # rl.user_matrices(q, t, nt)
-    # del q, t, nt, actions
+    q = np.loadtxt("Q_Matrix.txt")
+    t = np.loadtxt("T_Matrix.txt")
+    nt = np.loadtxt("NT_Matrix.txt")
+
+    rl.user_matrices(q, t, nt)
+    del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -587,7 +587,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1001
+    episodes = 1
     rlist = []
 
     for episode in range(episodes):
@@ -614,9 +614,9 @@ if __name__ == "__main__":
 
         # Valve stuck position
         if episode % 10 == 0:
-            valve_pos = 12
+            valve_pos = 7
         else:
-            valve_pos = 12  # np.random.uniform(7, 13.5)
+            valve_pos = np.random.uniform(7, 13.5)
 
         for t in range(7, env.Nsim + 1):
 
@@ -654,7 +654,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
                                                                        env.y[t-1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=True, time=t, min_eps_rate=0.001)
+                                                                      ep_greedy=False, time=t, min_eps_rate=0.001)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
@@ -668,7 +668,7 @@ if __name__ == "__main__":
 
             # Simulate next time
             next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
-                                                      economics='mixed', w_y1=1.0, w_y2=0.0)
+                                                      economics='mixed', w_y1=0.8, w_y2=0.2)
 
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
             if next_state[1] * 0.99 < action < next_state[1] * 1.01 and t - rl.eval > 12:
