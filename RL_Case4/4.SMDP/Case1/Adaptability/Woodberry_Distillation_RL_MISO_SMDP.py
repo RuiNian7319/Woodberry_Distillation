@@ -560,10 +560,12 @@ if __name__ == "__main__":
 
     # Load Q, T, and NT matrices from previous training
     q = np.loadtxt("Q_Matrix.txt")
-    t = np.loadtxt("T_Matrix.txt")
-    nt = np.loadtxt("NT_Matrix.txt")
-    # t = np.ones((q.shape[0], q.shape[1]))
-    # nt = np.zeros((q.shape[0], q.shape[1]))
+    # t = np.loadtxt("T_Matrix.txt")
+    # nt = np.loadtxt("NT_Matrix.txt")
+
+    # Reset learning rate
+    t = np.ones((q.shape[0], q.shape[1]))
+    nt = np.zeros((q.shape[0], q.shape[1]))
 
     rl.user_matrices(q, t, nt)
     del q, t, nt, actions
@@ -587,7 +589,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1
+    episodes = 301
     rlist = []
 
     for episode in range(episodes):
@@ -654,7 +656,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
                                                                        env.y[t-1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=False, time=t, min_eps_rate=0.001)
+                                                                      ep_greedy=True, time=t, min_eps_rate=0.001)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
@@ -668,7 +670,7 @@ if __name__ == "__main__":
 
             # Simulate next time
             next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
-                                                      economics='mixed', w_y1=1.0, w_y2=0.0)
+                                                      economics='mixed', w_y1=0.8, w_y2=0.2)
 
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
             if next_state[1] * 0.99 < action < next_state[1] * 1.01 and t - rl.eval > 12:
