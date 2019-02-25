@@ -541,13 +541,13 @@ if __name__ == "__main__":
     # Building states for the problem, states will be the tracking errors
     states = []
 
-    rl.x1 = np.zeros(15)
-    rl.x1[0:3] = np.linspace(-5, 2, 3)
-    rl.x1[3:16] = np.linspace(3, 25, 12)
+    rl.x1 = np.zeros(20)
+    rl.x1[0:16] = np.linspace(-20, 0, 16)
+    rl.x1[16:20] = np.linspace(2, 12, 4)
 
-    rl.x2 = np.zeros(15)
-    rl.x2[0:3] = np.linspace(-2, 5, 3)
-    rl.x2[3:16] = np.linspace(6, 25, 12)
+    rl.x2 = np.zeros(20)
+    rl.x2[0:3] = np.linspace(-5, 5, 3)
+    rl.x2[3:20] = np.linspace(6, 28, 17)
 
     for x1 in rl.x1:
         for x2 in rl.x2:
@@ -607,19 +607,20 @@ if __name__ == "__main__":
         env.action_list.append(set_point2)
         env.time_list.append(0)
 
-        tracker = 0
-
         # SMDP Reward tracking
         cumu_reward = []
+        rl.eval = 0
+        tracker = 0
 
         # Valve stuck position
         if episode % 10 == 0:
-            valve_pos = 12
+            valve_pos = 7
         else:
-            valve_pos = 12  # np.random.uniform(7, 13.5)
+            valve_pos = np.random.uniform(7, 13.5)
 
         for t in range(7, env.Nsim + 1):
 
+            # Maximum possible arrival time
             tau = rl.eval_period
 
             if t % 4 == 0 and t < 170:
@@ -641,7 +642,7 @@ if __name__ == "__main__":
 
             # RL Controls
             if 150 < t:
-                if t % rl.eval_period == 0 or rl.next_eval:
+                if (t % rl.eval_period == 0 or rl.next_eval) and t - rl.eval > 12:
 
                     rl.next_eval = False
 
@@ -685,7 +686,8 @@ if __name__ == "__main__":
                 cumu_reward = []
 
                 rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5,
-                                 min_learn_rate=0.01)
+                                 min_learn_rate=0.0005, tau=tau)
+
                 tot_reward.append(reward_rate)
 
                 # Define eval period for next state

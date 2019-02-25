@@ -3,8 +3,15 @@ Wood-Berry Distillation Column Simulation with Reinforcement Learning for Fault 
 
 By: Rui Nian
 
-Date of Last Edit: Feb 13th 2019
+Date of Last Edit: Feb 1st 2019
 
+Optimal for valve stuck at 12:
+        Setpoint_2 = 19
+                y1 = 94.9
+                y2 = 19.0
+
+10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+-175, -158, -144, -131, -120, -111, -104, -99, -96, -94, -95, -98, -102, -109
 
 The MIT License (MIT)
 Copyright © 2019 Rui Nian
@@ -32,7 +39,7 @@ import sys
 sys.path.insert(0, '/home/rui/Documents/IOL_Fault_Tolerant_Control/Woodberry_Distillation')
 sys.path.insert(0, '/Users/ruinian/Documents/MATLAB/Woodberry_Distillation')
 
-from RL_Module_Velocity_SMDP import ReinforceLearning
+from RL_Module_Velocity_MIMO_SMDP import ReinforceLearning
 
 
 class WoodBerryDistillation:
@@ -53,6 +60,9 @@ class WoodBerryDistillation:
                   C:  Output matrix
                   D:  Feedforward matrix
            timestep:  Sequential time steps for the whole simulation
+           setpoint:  System set-point change
+        action_list:  RL set-points
+          time_list:  Corresponds to the changes RL created
 
 
     Methods
@@ -118,6 +128,10 @@ class WoodBerryDistillation:
         # Setpoint changes
         self.set_point = np.zeros(nsim + 1)
 
+        # RL Set-points
+        self.action_list = []
+        self.time_list = []
+
     def ode(self, state, t, inputs):
         """
         Description
@@ -158,7 +172,7 @@ class WoodBerryDistillation:
 
         return dxdt
 
-    def step(self, inputs, time, setpoint, noise=False, economics='distillate'):
+    def step(self, inputs, time, setpoint, noise=False, economics='distillate', w_y1=0.8, w_y2=0.2):
         """
         Description
              -----
@@ -211,13 +225,19 @@ class WoodBerryDistillation:
         else:
             done = False
 
-        reward = self.reward_calculator(setpoint, time, economics=economics)
+        if len(self.action_list) < 2:
+            # If its the first action, no penalty on input
+            reward = self.reward_calculator(setpoint, time, economics=economics)
+        else:
+            # Penalty on input
+            reward = self.reward_calculator(setpoint, time, d_input=np.abs(self.action_list[-1] - self.action_list[-2]),
+                                            economics=economics, w_y1=w_y1, w_y2=w_y2)
 
         info = "placeholder"
 
         return new_state, reward, done, info
 
-    def reward_calculator(self, setpoint, time, economics='distillate'):
+    def reward_calculator(self, setpoint, time, economics='distillate', d_input=0, w_y1=0.8, w_y2=0.2):
         """
         Description
              -----
@@ -226,7 +246,7 @@ class WoodBerryDistillation:
 
         Inputs
              -----
-
+                d_input: Change in input
 
 
         Returns
@@ -243,9 +263,19 @@ class WoodBerryDistillation:
             reward = -error_y2
 
         elif economics == 'all':
-            error_y1 = abs(self.y[time, 0] - setpoint[0])
-            error_y2 = abs(self.y[time, 1] - setpoint[1])
-            reward = -(error_y1 + error_y2)
+            error_y1 = np.square(abs(self.y[time, 0] - setpoint[0]))
+            error_y2 = np.square(abs(self.y[time, 1] - setpoint[1]))
+            reward = -(error_y1 + error_y2) - d_input
+
+        elif economics == 'mixed':
+
+            assert(w_y1 + w_y2 == 1)
+
+            error_y1 = w_y1 * np.square(abs(self.y[time, 0] - setpoint[0]))
+            error_y2 = w_y2 * np.square(abs(self.y[time, 1] - setpoint[1]))
+
+            # Tracking error + change in input cost
+            reward = -(error_y1 + error_y2) - (abs(d_input) * 5)
 
         else:
             raise ValueError('Improper type selected')
@@ -346,7 +376,7 @@ class WoodBerryDistillation:
         self.y[:, 1] = self.C[1, 1] * self.x[0, 1]
 
         # Setpoint changes
-        self.set_point = np.zeros((self.Nsim + 1, 1))
+        self.set_point = np.zeros((self.Nsim + 1, 2))
 
     def plots(self, timestart=50, timestop=550):
         """
@@ -509,12 +539,24 @@ if __name__ == "__main__":
                            epsilon=0.2, doe=1.2, eval_period=30)
 
     # Building states for the problem, states will be the tracking errors
-    states = np.linspace(-30, 10, 201)
+    states = []
+
+    rl.x1 = np.zeros(20)
+    rl.x1[0:16] = np.linspace(-20, 0, 16)
+    rl.x1[16:20] = np.linspace(2, 12, 4)
+
+    rl.x2 = np.zeros(20)
+    rl.x2[0:3] = np.linspace(-5, 5, 3)
+    rl.x2[3:20] = np.linspace(6, 28, 17)
+
+    for x1 in rl.x1:
+        for x2 in rl.x2:
+            states.append([x1, x2])
 
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.linspace(-15, 15, 121)
+    actions = np.linspace(-5, 5, 11)
 
     rl.user_actions(actions)
 
@@ -562,14 +604,10 @@ if __name__ == "__main__":
         state = 0
         action = set_point2
         action_index = 0
-        action_list = [set_point2]
-        time_list = [0]
+        env.action_list.append(set_point2)
+        env.time_list.append(0)
 
-        # Fault Detection
-        # deltaU = []
-        # deltaY = []
-
-        # SMDP Reward and arrival time tracking
+        # SMDP Reward tracking
         cumu_reward = []
         rl.eval = 0
         tracker = 0
@@ -578,31 +616,25 @@ if __name__ == "__main__":
         if episode % 10 == 0:
             valve_pos = 12
         else:
-            valve_pos = np.random.uniform(7, 13.5)
+            valve_pos = 12  # np.random.uniform(7, 13.5)
 
-        """
-        Loop Description
-           ---
-              Loop over one episode
-        """
         for t in range(7, env.Nsim + 1):
 
             # Maximum possible arrival time
             tau = rl.eval_period
 
-            # PID Evaluate
             if t % 4 == 0 and t < 170:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Set-point change
-            if t == 1000:
-                set_point1 = 85
-                # set_point2 += 2
+            # if t == 100:
+            #     set_point1 = 65
+            #     set_point2 += 2
 
             # Disturbance
-            if 3500 < t < 3520:
-                env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 2, size=(1, 4))
+            # if 350 < t < 370:
+            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 3, size=(1, 4))
 
             # Actuator Faults
             if 105 < t:
@@ -610,23 +642,23 @@ if __name__ == "__main__":
 
             # RL Controls
             if 150 < t:
-                # If its eval period, or if the arrival time is faster than expected. And evaluation must be 12 t apart
                 if (t % rl.eval_period == 0 or rl.next_eval) and t - rl.eval > 12:
 
                     rl.next_eval = False
 
                     tracker += 1
-                    print(tracker, t)
 
                     # RL evaluation time
                     rl.eval = t
 
-                    state, action, action_index = rl.action_selection(env.y[t - 1, 0] - set_point1, action_list[-1],
-                                                                      no_decay=25, ep_greedy=False, time=t,
-                                                                      min_eps_rate=0.01)
+                    state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
+                                                                       env.y[t-1, 1] - set_point2],
+                                                                      env.action_list[-1], no_decay=25,
+                                                                      ep_greedy=False, time=t, min_eps_rate=0.001)
+
                     # To see how well the PID is tracking RL
-                    action_list.append(action)
-                    time_list.append(t)
+                    env.action_list.append(action)
+                    env.time_list.append(t)
 
             if 170 < t and t % 4 == 0:
                 input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
@@ -635,8 +667,8 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=False,
-                                                      economics='distillate')
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
+                                                      economics='mixed', w_y1=0.8, w_y2=0.2)
 
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
             if next_state[1] * 0.99 < action < next_state[1] * 1.01 and t - rl.eval > 12:
@@ -646,11 +678,6 @@ if __name__ == "__main__":
             # Append cumulative reward
             cumu_reward.append(Reward)
 
-            # For fault detection
-            # if t % 5 == 0 and t != 0:
-            #     deltaU.append(abs(PID1.u[t] - PID1.u[t - 10]))
-            #     deltaY.append(abs(env.y[t, 0] - env.y[t - 5, 0]))
-
             # RL Feedback
             if t == rl.eval_feedback and t > 150:
 
@@ -658,8 +685,9 @@ if __name__ == "__main__":
                 reward_rate = np.average(cumu_reward)
                 cumu_reward = []
 
-                # Update RL Matrices
-                rl.matrix_update(action_index, reward_rate, state, env.y[t, 0] - set_point1, 5, tau)
+                rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5,
+                                 min_learn_rate=0.0005, tau=tau)
+
                 tot_reward.append(reward_rate)
 
                 # Define eval period for next state
@@ -669,13 +697,13 @@ if __name__ == "__main__":
         rl.autosave(episode, 100)
 
         if episode % 10 == 0:
-            print("Episode {} | Episode Reward {}".format(episode, np.average(tot_reward)))
+            print("Episode {} | Current Reward {}".format(episode, np.average(tot_reward)))
             rlist.append(np.average(tot_reward))
 
     env.plots(timestart=50, timestop=6000)
 
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
     # plt.show()
-    #
+
     # plt.scatter(PID2.u[40:env.y.shape[0]], env.y[40:, 1])
     # plt.show()
