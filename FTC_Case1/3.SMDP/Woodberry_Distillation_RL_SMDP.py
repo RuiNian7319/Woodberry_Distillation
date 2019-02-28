@@ -29,7 +29,7 @@ import gc
 import warnings
 import sys
 
-sys.path.insert(0, '/home/rui/Documents/IOL_Fault_Tolerant_Control/Woodberry_Distillation')
+sys.path.insert(0, '/home/rui/Documents/Imperial_Oil/IOL_Fault_Tolerant_Control/Woodberry_Distillation')
 sys.path.insert(0, '/Users/ruinian/Documents/MATLAB/Woodberry_Distillation')
 
 from RL_Module_Velocity_SMDP import ReinforceLearning
@@ -365,10 +365,10 @@ class WoodBerryDistillation:
         plt.plot(self.timestep[timestart:timestop], self.y[timestart:timestop, 0], label='$X_D$')
         plt.plot(self.timestep[timestart:timestop], self.y[timestart:timestop, 1], label='$X_B$')
 
-        plt.xlabel(r'Time, \textit{t} (s)')
+        plt.xlabel(r'Time, \textit{t} (min)')
         plt.ylabel(r'\%MeOH, \textit{X} (wt. \%)')
 
-        plt.legend(loc=0, prop={'size': 12}, frameon=False)
+        plt.legend(loc='best', prop={'size': 12}, frameon=False)
 
         plt.show()
 
@@ -537,7 +537,7 @@ if __name__ == "__main__":
     init_state = np.array([65.13, 42.55, 0.0, 0.0])
     init_input = np.array([3.9, 0.0])
 
-    env = WoodBerryDistillation(nsim=6000, x0=init_state, u0=init_input)
+    env = WoodBerryDistillation(nsim=3000, x0=init_state, u0=init_input)
 
     # Starting at time 7 because the largest delay is 7
     input_1 = env.u[0, 0]
@@ -598,15 +598,19 @@ if __name__ == "__main__":
             # Set-point change
             if t == 1000:
                 set_point1 = 85
-                # set_point2 += 2
+                set_point2 += 2
 
             # Disturbance
-            if 3500 < t < 3520:
-                env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 2, size=(1, 4))
+            if 1500 < t < 1650:
+                env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 1, size=(1, 4))
+
+            # Disturbance
+            if 2250 < t < 2300:
+                env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 1, size=(1, 4))
 
             # Actuator Faults
-            if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
+            if 100 < t:
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
 
             # RL Controls
             if 150 < t:
@@ -616,7 +620,6 @@ if __name__ == "__main__":
                     rl.next_eval = False
 
                     tracker += 1
-                    print(tracker, t)
 
                     # RL evaluation time
                     rl.eval = t
@@ -635,7 +638,7 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=False,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=set_point1, noise=True,
                                                       economics='distillate')
 
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
@@ -652,7 +655,7 @@ if __name__ == "__main__":
             #     deltaY.append(abs(env.y[t, 0] - env.y[t - 5, 0]))
 
             # RL Feedback
-            if t == rl.eval_feedback and t > 150:
+            if t == rl.eval_feedback and t > 170:
 
                 # Calculate and reset cumulative reward
                 reward_rate = np.average(cumu_reward)
@@ -672,7 +675,7 @@ if __name__ == "__main__":
             print("Episode {} | Episode Reward {}".format(episode, np.average(tot_reward)))
             rlist.append(np.average(tot_reward))
 
-    env.plots(timestart=50, timestop=6000)
+    env.plots(timestart=50, timestop=3000)
 
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
     # plt.show()
