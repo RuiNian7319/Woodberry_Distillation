@@ -590,7 +590,11 @@ if __name__ == "__main__":
 
     for episode in range(episodes):
 
-        # Resetting environment and PID controllers
+        # Reduce delta Y and delta U
+        dY = []
+        dU = []
+
+        # Resetting environment and PID controllers, add terms to overcome time delay
         env.reset(rand_init=False)
         PID1.u = [3.9, 3.9, 3.9, 3.9, 3.9, 3.9, 3.9, 3.9]
         PID2.u = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -621,9 +625,12 @@ if __name__ == "__main__":
             # Maximum possible arrival time
             tau = rl.eval_period
 
-            if t % 4 == 0 and t < 170:
+            if t % 4 == 0: #and t < 170:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
+
+                dY.append(env.y[t - 1, 0] - env.y[t - 5, 0])
+                dU.append(PID1.u[t] - PID1.u[t - 4])
 
             # Set-point change
             # if t == 100:
@@ -635,8 +642,8 @@ if __name__ == "__main__":
             #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 3, size=(1, 4))
 
             # Actuator Faults
-            if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
+            if 150 < t:
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
 
             # RL Controls
             if 150 < t:
@@ -665,7 +672,7 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=True,
                                                       economics='mixed', w_y1=1.0, w_y2=0.0)
 
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
@@ -704,4 +711,13 @@ if __name__ == "__main__":
     # plt.show()
 
     # plt.scatter(PID2.u[40:env.y.shape[0]], env.y[40:, 1])
+    # plt.show()
+
+    # Plots outputs vs inputs
+    # plt.scatter(dU, dY)
+    # plt.xlim([-5, 15])
+    # plt.ylim([-15, 8])
+    # plt.xlabel(r'Change in input, \textit{$\Delta u_1$} (lb/min)')
+    # plt.ylabel(r'Change in output, \textit{$\Delta y_1$} (MeOH wt. \%)')
+    #
     # plt.show()

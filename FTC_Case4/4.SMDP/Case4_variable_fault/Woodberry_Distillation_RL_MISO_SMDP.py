@@ -579,7 +579,7 @@ if __name__ == "__main__":
     init_state = np.array([65.13, 42.55, 0.0, 0.0])
     init_input = np.array([3.9, 0.0])
 
-    env = WoodBerryDistillation(nsim=6000, x0=init_state, u0=init_input)
+    env = WoodBerryDistillation(nsim=3000, x0=init_state, u0=init_input)
 
     # Starting at time 7 because the largest delay is 7
     input_1 = env.u[0, 0]
@@ -614,7 +614,7 @@ if __name__ == "__main__":
 
         # Valve stuck position
         if episode % 10 == 0:
-            valve_pos = 7
+            valve_pos = 12
         else:
             valve_pos = np.random.uniform(7, 13.5)
 
@@ -623,7 +623,7 @@ if __name__ == "__main__":
             # Maximum possible arrival time
             tau = rl.eval_period
 
-            if t % 4 == 0 and t < 170:
+            if t % 4 == 0 and t < 1000:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
@@ -637,11 +637,11 @@ if __name__ == "__main__":
             #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 3, size=(1, 4))
 
             # Actuator Faults
-            if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
+            if 1005 < t:
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
 
             # RL Controls
-            if 150 < t:
+            if 1200 < t:
                 if (t % rl.eval_period == 0 or rl.next_eval) and t - rl.eval > 12:
 
                     rl.next_eval = False
@@ -660,14 +660,14 @@ if __name__ == "__main__":
                     env.action_list.append(action)
                     env.time_list.append(t)
 
-            if 170 < t and t % 4 == 0:
+            if 1250 < t and t % 4 == 0:
                 input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Generate input tuple
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=True,
                                                       economics='mixed', w_y1=0.8, w_y2=0.2)
 
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
@@ -679,7 +679,7 @@ if __name__ == "__main__":
             cumu_reward.append(Reward)
 
             # RL Feedback
-            if t == rl.eval_feedback and t > 150:
+            if t == rl.eval_feedback and t > 1200:
 
                 # Calculate and reset cumulative reward
                 reward_rate = np.average(cumu_reward)
