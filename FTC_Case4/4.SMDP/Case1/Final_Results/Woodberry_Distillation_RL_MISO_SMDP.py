@@ -633,7 +633,7 @@ if __name__ == "__main__":
                 dU.append(PID1.u[t] - PID1.u[t - 4])
 
             # Set-point change
-            # if t == 320:
+            # if t == 350:
             #     set_point1 = 90
                 # set_point2 += 2
 

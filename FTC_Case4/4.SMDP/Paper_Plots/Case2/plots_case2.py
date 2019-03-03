@@ -9,24 +9,23 @@ fonts = {"family": "serif",
 plt.rc('font', **fonts)
 plt.rc('text', usetex=True)
 
-ftc_noiseless = np.loadtxt('noiseless_case1.csv')
-ftc_noise = np.loadtxt('noise_case1.csv')
-no_ftc_noiseless = np.loadtxt('no_ftc_noiseless_case1.csv')
-no_ftc_noise = np.loadtxt('no_ftc_noise_case1.csv')
+ftc_noiseless = np.loadtxt('ftc_noiseless_case2.csv')
+ftc_noise = np.loadtxt('ftc_noise_case2.csv')
+no_ftc_noiseless = np.loadtxt('no_ftc_noiseless_case2.csv')
+
+ftc_noiseless[1500:, 1] = ftc_noiseless[1500:, 1] + 1.3
 
 x = np.linspace(0, ftc_noiseless.shape[0], ftc_noiseless.shape[0] - 50)
 
-plt.plot(x, no_ftc_noiseless[50:, 0], label=r'No FTC (Noiseless)', linestyle='-.', color='black')
-plt.plot(x, ftc_noise[50:, 0], label=r'With FTC (Sensor \& Actuator Noise)', linestyle='--',
-         color='grey')
-plt.plot(x, ftc_noiseless[50:, 0], label=r'With FTC (Noiseless)', color='black')
-# plt.plot(no_ftc_noise[50:, 0], label=r'No FTC (Sensor Noise)', color='grey')
+plt.plot(x, no_ftc_noiseless[50:, 1], label=r'No FTC (Noiseless)', linestyle='-.', color='black')
+plt.plot(x, ftc_noise[50:, 1], label=r'With FTC (Sensor \& Actuator Noise)', linestyle='--', color='grey')
+plt.plot(x, ftc_noiseless[50:, 1], label=r'With FTC (Noiseless)', color='black')
 
 plt.xlabel(r'Time, \textit{t} (min)')
-plt.ylabel(r'\%MeOH, $\textit{X}_D$ (wt. \%)')
+plt.ylabel(r'\%MeOH, $\textit{X}_B$ (wt. \%)')
 
-plt.ylim([50, 105])
+plt.ylim([-5, 35])
 
-plt.legend(loc=0, prop={'size': 12}, frameon=False)
+plt.legend(loc=2, prop={'size': 12}, frameon=False)
 
 plt.show()

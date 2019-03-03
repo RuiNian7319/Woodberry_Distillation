@@ -313,7 +313,7 @@ class WoodBerryDistillation:
 
             # If noise is enabled for actuator 2
             if noise:
-                self.u[time - 1, 1] += np.random.normal(0, 0.3)
+                self.u[time - 1, 1] += np.random.normal(0, 0.1)
 
     def sensor_fault(self, sensor_num, sensor_value):
         """
@@ -546,8 +546,8 @@ if __name__ == "__main__":
     rl.x1[3:15] = np.linspace(3, 15, 12)
 
     rl.x2 = np.zeros(15)
-    rl.x2[0:11] = np.linspace(-5, 5, 11)
-    rl.x2[11:15] = np.linspace(6, 25, 4)
+    rl.x2[0:12] = np.linspace(-15, 0, 12)
+    rl.x2[12:15] = np.linspace(2, 15, 3)
 
     for x1 in rl.x1:
         for x2 in rl.x2:
@@ -556,10 +556,7 @@ if __name__ == "__main__":
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.zeros(15)
-    actions[0:5] = np.linspace(-11, -3, 5)
-    actions[5:14] = np.linspace(-2, 3, 9)
-    actions[14] = 0
+    actions = np.linspace(-12, 6, 19)
 
     rl.user_actions(actions)
 
@@ -582,7 +579,7 @@ if __name__ == "__main__":
     init_state = np.array([65.13, 42.55, 0.0, 0.0])
     init_input = np.array([3.9, 0.0])
 
-    env = WoodBerryDistillation(nsim=6000, x0=init_state, u0=init_input)
+    env = WoodBerryDistillation(nsim=2000, x0=init_state, u0=init_input)
 
     # Starting at time 7 because the largest delay is 7
     input_1 = env.u[0, 0]
@@ -590,7 +587,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1201
+    episodes = 1
     rlist = []
 
     for episode in range(episodes):
@@ -617,7 +614,7 @@ if __name__ == "__main__":
 
         # Valve stuck position
         if episode % 10 == 0:
-            valve_pos = 4
+            valve_pos = 4.5
         else:
             valve_pos = np.random.uniform(0, 4.5)
 
@@ -631,13 +628,13 @@ if __name__ == "__main__":
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Set-point change
-            # if t == 320:
-            #     set_point2 = 10
+            if t == 320:
+                set_point2 = 10
                 # set_point2 += 2
 
             # Disturbance
-            # if 1400 < t < 1450:
-            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 0.5, size=(1, 4))
+            if 1400 < t < 1450:
+                env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 1.1, size=(1, 4))
 
             # Actuator Faults
             if 350 < t:
@@ -657,7 +654,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
                                                                        env.y[t-1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=True, time=t, min_eps_rate=0.001)
+                                                                      ep_greedy=False, time=t, min_eps_rate=0.1)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
@@ -681,7 +678,7 @@ if __name__ == "__main__":
             # Append cumulative reward
             cumu_reward.append(Reward)
 
-            # RL Feedback
+            # # RL Feedback
             if t == rl.eval_feedback and t > 350:
 
                 # Calculate and reset cumulative reward
