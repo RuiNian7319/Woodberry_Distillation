@@ -36,7 +36,7 @@ import gc
 import warnings
 import sys
 
-sys.path.insert(0, '/home/rui/Documents/Imperial_Oil/IOL_Fault_Tolerant_Control/Woodberry_Distillation')
+sys.path.insert(0, '/home/rui/Documents/IOL_Fault_Tolerant_Control/Woodberry_Distillation')
 sys.path.insert(0, '/Users/ruinian/Documents/MATLAB/Woodberry_Distillation')
 
 from RL_Module_Velocity_MIMO_SMDP import ReinforceLearning
@@ -541,11 +541,13 @@ if __name__ == "__main__":
     # Building states for the problem, states will be the tracking errors
     states = []
 
-    rl.x1 = np.zeros(28)
-    rl.x1[0:28] = np.linspace(-20, 20, 28)
+    rl.x1 = np.zeros(15)
+    rl.x1[0:11] = np.linspace(-25, 2, 11)
+    rl.x1[11:15] = np.linspace(3, 10, 4)
 
-    rl.x2 = np.zeros(28)
-    rl.x2[0:28] = np.linspace(-20, 20, 28)
+    rl.x2 = np.zeros(15)
+    rl.x2[0:11] = np.linspace(-5, 5, 11)
+    rl.x2[11:15] = np.linspace(6, 25, 4)
 
     for x1 in rl.x1:
         for x2 in rl.x2:
@@ -560,12 +562,8 @@ if __name__ == "__main__":
 
     # Load Q, T, and NT matrices from previous training
     q = np.loadtxt("Q_Matrix.txt")
-    # t = np.loadtxt("T_Matrix.txt")
-    # nt = np.loadtxt("NT_Matrix.txt")
-
-    # Reset learning rate
-    t = np.ones((q.shape[0], q.shape[1]))
-    nt = np.zeros((q.shape[0], q.shape[1]))
+    t = np.loadtxt("T_Matrix.txt")
+    nt = np.loadtxt("NT_Matrix.txt")
 
     rl.user_matrices(q, t, nt)
     del q, t, nt, actions
@@ -625,22 +623,22 @@ if __name__ == "__main__":
             # Maximum possible arrival time
             tau = rl.eval_period
 
-            if t % 4 == 0 and t < 350:
+            if t % 4 == 0 and t < 170:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Set-point change
-            # if t == 100:
-            #     set_point1 = 65
-            #     set_point2 += 2
+            if t == 320:
+                set_point2 = 10
+                # set_point2 += 2
 
             # Disturbance
-            # if 350 < t < 370:
-            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 3, size=(1, 4))
+            if 1400 < t < 1450:
+                env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 0.5, size=(1, 4))
 
             # Actuator Faults
             if 350 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
+                env.actuator_fault(actuator_num=2, actuator_value=valve_pos, time=t, noise=False)
 
             # RL Controls
             if 350 < t:

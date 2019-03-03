@@ -395,7 +395,7 @@ class WoodBerryDistillation:
         plt.plot(self.timestep[timestart:timestop], self.y[timestart:timestop, 0], label='$X_D$')
         plt.plot(self.timestep[timestart:timestop], self.y[timestart:timestop, 1], label='$X_B$')
 
-        plt.xlabel(r'Time, \textit{t} (s)')
+        plt.xlabel(r'Time, \textit{t} (min)')
         plt.ylabel(r'\%MeOH, \textit{X} (wt. \%)')
 
         plt.legend(loc=0, prop={'size': 12}, frameon=False)
@@ -577,7 +577,7 @@ if __name__ == "__main__":
     init_state = np.array([65.13, 42.55, 0.0, 0.0])
     init_input = np.array([3.9, 0.0])
 
-    env = WoodBerryDistillation(nsim=6000, x0=init_state, u0=init_input)
+    env = WoodBerryDistillation(nsim=2000, x0=init_state, u0=init_input)
 
     # Starting at time 7 because the largest delay is 7
     input_1 = env.u[0, 0]
@@ -625,7 +625,7 @@ if __name__ == "__main__":
             # Maximum possible arrival time
             tau = rl.eval_period
 
-            if t % 4 == 0: #and t < 170:
+            if t % 4 == 0 and t < 170:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
@@ -633,20 +633,20 @@ if __name__ == "__main__":
                 dU.append(PID1.u[t] - PID1.u[t - 4])
 
             # Set-point change
-            # if t == 100:
-            #     set_point1 = 65
-            #     set_point2 += 2
+            # if t == 320:
+            #     set_point1 = 90
+                # set_point2 += 2
 
             # Disturbance
-            # if 350 < t < 370:
-            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 3, size=(1, 4))
+            # if 1400 < t < 1450:
+            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 0.7, size=(1, 4))
 
             # Actuator Faults
-            if 150 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=True)
+            if 350 < t:
+                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
 
             # RL Controls
-            if 150 < t:
+            if 350 < t:
                 if (t % rl.eval_period == 0 or rl.next_eval) and t - rl.eval > 12:
 
                     rl.next_eval = False
@@ -665,14 +665,14 @@ if __name__ == "__main__":
                     env.action_list.append(action)
                     env.time_list.append(t)
 
-            if 170 < t and t % 4 == 0:
+            if 370 < t and t % 4 == 0:
                 input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Generate input tuple
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=True,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
                                                       economics='mixed', w_y1=1.0, w_y2=0.0)
 
             # Reached steady state given by RL or system did not reach the state in 30 seconds,
@@ -684,7 +684,7 @@ if __name__ == "__main__":
             cumu_reward.append(Reward)
 
             # RL Feedback
-            if t == rl.eval_feedback and t > 150:
+            if t == rl.eval_feedback and t > 350:
 
                 # Calculate and reset cumulative reward
                 reward_rate = np.average(cumu_reward)

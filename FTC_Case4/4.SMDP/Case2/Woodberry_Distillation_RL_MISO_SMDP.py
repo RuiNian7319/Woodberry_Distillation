@@ -542,8 +542,8 @@ if __name__ == "__main__":
     states = []
 
     rl.x1 = np.zeros(15)
-    rl.x1[0:11] = np.linspace(-25, 2, 11)
-    rl.x1[11:15] = np.linspace(3, 10, 4)
+    rl.x1[0:3] = np.linspace(-5, 2, 3)
+    rl.x1[3:15] = np.linspace(3, 15, 12)
 
     rl.x2 = np.zeros(15)
     rl.x2[0:11] = np.linspace(-5, 5, 11)
@@ -556,7 +556,10 @@ if __name__ == "__main__":
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.linspace(-5, 5, 11)
+    actions = np.zeros(15)
+    actions[0:5] = np.linspace(-11, -3, 5)
+    actions[5:14] = np.linspace(-2, 3, 9)
+    actions[14] = 0
 
     rl.user_actions(actions)
 
@@ -587,7 +590,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1
+    episodes = 1201
     rlist = []
 
     for episode in range(episodes):
@@ -602,9 +605,9 @@ if __name__ == "__main__":
 
         tot_reward = []
         state = 0
-        action = set_point2
+        action = set_point1
         action_index = 0
-        env.action_list.append(set_point2)
+        env.action_list.append(set_point1)
         env.time_list.append(0)
 
         # SMDP Reward tracking
@@ -614,34 +617,34 @@ if __name__ == "__main__":
 
         # Valve stuck position
         if episode % 10 == 0:
-            valve_pos = 12
+            valve_pos = 4
         else:
-            valve_pos = 12  # np.random.uniform(7, 13.5)
+            valve_pos = np.random.uniform(0, 4.5)
 
         for t in range(7, env.Nsim + 1):
 
             # Maximum possible arrival time
             tau = rl.eval_period
 
-            if t % 4 == 0 and t < 170:
+            if t % 4 == 0 and t < 350:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
             # Set-point change
-            # if t == 100:
-            #     set_point1 = 65
-            #     set_point2 += 2
+            # if t == 320:
+            #     set_point2 = 10
+                # set_point2 += 2
 
             # Disturbance
-            # if 350 < t < 370:
-            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 3, size=(1, 4))
+            # if 1400 < t < 1450:
+            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 0.5, size=(1, 4))
 
             # Actuator Faults
-            if 105 < t:
-                env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
+            if 350 < t:
+                env.actuator_fault(actuator_num=2, actuator_value=valve_pos, time=t, noise=False)
 
             # RL Controls
-            if 150 < t:
+            if 350 < t:
                 if (t % rl.eval_period == 0 or rl.next_eval) and t - rl.eval > 12:
 
                     rl.next_eval = False
@@ -654,14 +657,14 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
                                                                        env.y[t-1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=False, time=t, min_eps_rate=0.001)
+                                                                      ep_greedy=True, time=t, min_eps_rate=0.001)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
                     env.time_list.append(t)
 
-            if 170 < t and t % 4 == 0:
-                input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
+            if 370 < t and t % 4 == 0:
+                input_1 = PID1(action, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
 
             # Generate input tuple
             control_input = np.array([[input_1, input_2]])
@@ -679,7 +682,7 @@ if __name__ == "__main__":
             cumu_reward.append(Reward)
 
             # RL Feedback
-            if t == rl.eval_feedback and t > 150:
+            if t == rl.eval_feedback and t > 350:
 
                 # Calculate and reset cumulative reward
                 reward_rate = np.average(cumu_reward)
