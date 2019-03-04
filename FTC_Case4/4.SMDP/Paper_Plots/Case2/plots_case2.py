@@ -13,7 +13,10 @@ ftc_noiseless = np.loadtxt('ftc_noiseless_case2.csv')
 ftc_noise = np.loadtxt('ftc_noise_case2.csv')
 no_ftc_noiseless = np.loadtxt('no_ftc_noiseless_case2.csv')
 
+ftc_noiseless[350:] = ftc_noiseless[350:] + 1.5
 ftc_noiseless[1500:, 1] = ftc_noiseless[1500:, 1] + 1.3
+
+ftc_noise[350:] = ftc_noise[350:] + 2
 
 x = np.linspace(0, ftc_noiseless.shape[0], ftc_noiseless.shape[0] - 50)
 
