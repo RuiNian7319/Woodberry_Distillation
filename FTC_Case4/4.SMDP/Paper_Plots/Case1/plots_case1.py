@@ -29,4 +29,6 @@ plt.ylim([50, 105])
 
 plt.legend(loc=0, prop={'size': 12}, frameon=False)
 
+plt.savefig('Case1_Plot.eps', format='eps', dpi=1000)
+
 plt.show()

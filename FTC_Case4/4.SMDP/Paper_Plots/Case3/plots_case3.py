@@ -37,4 +37,6 @@ def flip(items, ncol):
 handles, labels = ax.get_legend_handles_labels()
 plt.legend(flip(handles, 2), flip(labels, 2), loc=6, ncol=2, prop={'size': 12}, frameon=False)
 
+plt.savefig('Case3_Plot.eps', format='eps', dpi=1000)
+
 plt.show()
