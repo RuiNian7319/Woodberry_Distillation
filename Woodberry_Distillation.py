@@ -3,8 +3,7 @@ Wood-Berry Distillation Column Simulation
 
 By: Rui Nian
 
-Date of Last Edit: January 22nd 2019
-
+Date of Last Edit: March 7th, 2019
 
 The MIT License (MIT)
 Copyright © 2019 Rui Nian
@@ -18,6 +17,7 @@ copyright notice and this permission notice shall be included in all copies or s
 
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import random
 
 from copy import deepcopy
@@ -26,6 +26,11 @@ from scipy.integrate import odeint
 import gc
 
 import warnings
+import sys
+
+gc.enable()
+sns.set()
+sns.set_style('white')
 
 
 class WoodBerryDistillation:
@@ -46,6 +51,9 @@ class WoodBerryDistillation:
                   C:  Output matrix
                   D:  Feedforward matrix
            timestep:  Sequential time steps for the whole simulation
+           setpoint:  System set-point change
+        action_list:  RL set-points
+          time_list:  Corresponds to the changes RL created
 
 
     Methods
@@ -78,16 +86,7 @@ class WoodBerryDistillation:
 
     def __init__(self, nsim, x0, u0, xs=np.array([2.6219, 1.7129, 1.113, 0.7632]), us=np.array([15.7, 5.337]),
                  step_size=1):
-        """
-        Description
-             -----
 
-
-
-        Variables
-             -----
-
-        """
         self.Nsim = nsim
         self.x0 = x0
         self.u0 = u0
@@ -117,6 +116,13 @@ class WoodBerryDistillation:
         # Timeline of simulation
         self.timestep = np.linspace(0, self.Nsim * self.step_size, self.Nsim + 1)
 
+        # Setpoint changes
+        self.set_point = np.zeros(nsim + 1)
+
+        # RL Set-points
+        self.action_list = []
+        self.time_list = []
+
     def ode(self, state, t, inputs):
         """
         Description
@@ -127,8 +133,9 @@ class WoodBerryDistillation:
 
         Inputs
              -----
-                state:
-               inputs:
+                state: States of the system at time t - 1. Current states has no physical meaning. [x1, x2, x3, x4]
+                    t: Limits of integration for sp.odeint.  [t - 1, t]
+               inputs: Control inputs into the ordinary differential equations. [u1, u2]
 
 
         Returns
@@ -156,7 +163,7 @@ class WoodBerryDistillation:
 
         return dxdt
 
-    def step(self, inputs, time, noise=False):
+    def step(self, inputs, time, setpoint, noise=False, economics='distillate', w_y1=0.8, w_y2=0.2):
         """
         Description
              -----
@@ -173,8 +180,12 @@ class WoodBerryDistillation:
 
         """
 
+        self.set_point[time] = setpoint
+
+        # Account for delay of the models
         delay_u = np.array([self.u[time - 1, 0], self.u[time - 7, 0], self.u[time - 3, 1], self.u[time - 3, 1]])
 
+        # Integrate the states to calculate for the next states
         x_next = odeint(self.ode, self.x[time - 1], [self.timestep[time - 1], self.timestep[time]], args=(delay_u, ))
 
         # odeint outputs the current time and the last time's x, so x_next[-1] is taken.
@@ -198,20 +209,71 @@ class WoodBerryDistillation:
         #     else:
         #         pass
 
-        state = deepcopy(self.y[time, :])
+        new_state = deepcopy(self.y[time, :])
 
         if time == (self.Nsim - 1):
             done = True
         else:
             done = False
 
-        reward = "placeholder"
+        if len(self.action_list) < 2:
+            # If its the first action, no penalty on input
+            reward = self.reward_calculator(setpoint, time, economics=economics)
+        else:
+            # Penalty on input
+            reward = self.reward_calculator(setpoint, time, d_input=np.abs(self.action_list[-1] - self.action_list[-2]),
+                                            economics=economics, w_y1=w_y1, w_y2=w_y2)
 
         info = "placeholder"
 
-        return state, reward, done, info
+        return new_state, reward, done, info
 
-    def actuator_fault(self, actuator_num, actuator_value, time):
+    def reward_calculator(self, setpoint, time, economics='distillate', d_input=0, w_y1=0.8, w_y2=0.2):
+        """
+        Description
+             -----
+
+
+
+        Inputs
+             -----
+                d_input: Change in input
+
+
+        Returns
+             -----
+
+        """
+
+        if economics == 'distillate':
+            error_y1 = abs(self.y[time, 0] - setpoint)
+            reward = -error_y1
+
+        elif economics == 'bottoms':
+            error_y2 = abs(self.y[time, 1] - setpoint)
+            reward = -error_y2
+
+        elif economics == 'all':
+            error_y1 = np.square(abs(self.y[time, 0] - setpoint[0]))
+            error_y2 = np.square(abs(self.y[time, 1] - setpoint[1]))
+            reward = -(error_y1 + error_y2) - d_input
+
+        elif economics == 'mixed':
+
+            assert(w_y1 + w_y2 == 1)
+
+            error_y1 = w_y1 * np.square(abs(self.y[time, 0] - setpoint[0]))
+            error_y2 = w_y2 * np.square(abs(self.y[time, 1] - setpoint[1]))
+
+            # Tracking error + change in input cost
+            reward = -(error_y1 + error_y2) - (abs(d_input) * 5)
+
+        else:
+            raise ValueError('Improper type selected')
+
+        return reward
+
+    def actuator_fault(self, actuator_num, actuator_value, time, noise=False):
         """
         Description
              -----
@@ -228,17 +290,27 @@ class WoodBerryDistillation:
 
         """
 
+        # If actuator 1 is selected
         if actuator_num == 1:
-            self.u[time - 1, 0] = actuator_value + np.random.normal(0, 0.2)
+            self.u[time - 1, 0] = actuator_value
 
+            # If noise is enabled for actuator 1
+            if noise:
+                self.u[time - 1, 0] += np.random.normal(0, 0.3)
+
+        # If actuator 2 is selected
         if actuator_num == 2:
-            self.u[time - 1, 1] = actuator_value + np.random.normal(0, 0.2)
+            self.u[time - 1, 1] = actuator_value
+
+            # If noise is enabled for actuator 2
+            if noise:
+                self.u[time - 1, 1] += np.random.normal(0, 0.3)
 
     def sensor_fault(self, sensor_num, sensor_value):
         """
         Description
              -----
-
+                Currently a dummy placeholder
 
 
         Inputs
@@ -251,11 +323,14 @@ class WoodBerryDistillation:
 
         """
 
-        if actuator_num == 1:
+        if sensor_num == 1:
+            self.u = self.u
             pass
 
-        if actuator_num == 2:
+        if sensor_num == 2:
             pass
+
+        return sensor_value
 
     def reset(self, rand_init=False):
         """
@@ -275,12 +350,12 @@ class WoodBerryDistillation:
         """
 
         # Output, state, and input trajectories
-        self.y = np.zeros((self.Nsim + 1, 4))
+        self.y = np.zeros((self.Nsim + 1, 2))
 
-        self.x = np.zeros((self.Nsim + 1, 2))
+        self.x = np.zeros((self.Nsim + 1, 4))
         self.u = np.zeros((self.Nsim + 1, 2))
 
-        # Populate the initial states
+        # Populate the initial states, if rand_init, add white noise sampled from uniform distribution.
         if rand_init:
             self.x[:] = self.x0 + np.random.uniform(-20, 20, size=(1, 2))
             self.u[:] = self.u0 + np.random.uniform(-3, 3, size=(1, 2))
@@ -290,10 +365,35 @@ class WoodBerryDistillation:
 
         self.y[:, 0] = self.C[0, 0] * self.x[0, 0]
         self.y[:, 1] = self.C[1, 1] * self.x[0, 1]
-        self.y[:, 2] = 100 - self.y[0, 0]
-        self.y[:, 3] = 100 - self.y[0, 1]
+
+        # Setpoint changes
+        self.set_point = np.zeros((self.Nsim + 1, 2))
 
     def plots(self, timestart=50, timestop=550):
+        """
+        Description
+             -----
+                Plots the %MeOH in the distillate and bottoms as a function of time.
+
+
+        Inputs
+             -----
+                timestart: What time (in simulation time) to start plotting
+                 timestop: What time (in simulation time) to stop plotting
+
+        """
+
+        plt.plot(self.timestep[timestart:timestop], self.y[timestart:timestop, 0], label='$X_D$')
+        plt.plot(self.timestep[timestart:timestop], self.y[timestart:timestop, 1], label='$X_B$')
+
+        plt.xlabel(r'Time, \textit{t} (min)')
+        plt.ylabel(r'\%MeOH, \textit{X} (wt. \%)')
+
+        plt.legend(loc=0, prop={'size': 12}, frameon=False)
+
+        plt.show()
+
+    def cost_function(self, output='distillate', error_type='ISE', dead_period=15):
         """
         Description
              -----
@@ -302,35 +402,51 @@ class WoodBerryDistillation:
 
         Inputs
              -----
-
-
+                error:
+          dead_period:
 
         Returns
              -----
+                error:
 
         """
 
-        plt.plot(self.y[timestart:timestop, 0], label='$X_D$')
-        plt.plot(self.y[timestart:timestop, 1], label='$X_B$')
+        error = 0
 
-        plt.xlabel(r'Time, \textit{t} (s)')
-        plt.ylabel(r'\%MeOH, \textit{X} (wt. \%)')
+        # Integral of absolute error evaluation
+        if error_type == "IAE":
+            if output == 'distillate':
+                error = abs(self.y[dead_period:, 0].reshape(-1, 1) - self.set_point[dead_period:])
+                error = sum(error) / (self.Nsim - dead_period)
+            elif output == 'bottoms':
+                error = abs(self.y[dead_period:, 1].reshape(-1, 1) - self.set_point[dead_period:])
+                error = sum(error) / (self.Nsim - dead_period)
 
-        plt.legend(loc=0, prop={'size': 12}, frameon=False)
+        # Integral of squared error evaluation
+        elif error_type == "ISE":
+            if output == 'distillate':
+                error = np.power(self.y[dead_period:, 0].reshape(-1, 1) - self.set_point[dead_period:], 2)
+                error = sum(error) / (self.Nsim - dead_period)
+            elif output == 'bottoms':
+                error = np.power(self.y[dead_period:, 1].reshape(-1, 1) - self.set_point[dead_period:], 2)
+                error = sum(error) / (self.Nsim - dead_period)
 
-        plt.show()
+        else:
+            raise ValueError('Improper error evaluation selected.')
+
+        return error
 
 
-class PIDControl:
+class DiscretePIDControl:
     """
 
 
     """
     def __repr__(self):
-        return "PIDControl({}, {}, {})".format(self.Kp, self.Ki, self.Kd)
+        return "DiscretePIDControl({}, {}, {})".format(self.Kp, self.Ki, self.Kd)
 
     def __str__(self):
-        return "PID Controller"
+        return "Discrete-Time PID Controller"
 
     def __init__(self, kp, ki, kd):
         """
@@ -359,8 +475,9 @@ class PIDControl:
 
         # Controls from the digital controller
         self.u = []
+        self.error = []
 
-    def __call__(self, setpoint, x_cur, x_1, x_2, last_u, eval_time=4):
+    def __call__(self, setpoint, x_cur, x_1, x_2, eval_time=4):
         """
         Description
              -----
@@ -381,11 +498,13 @@ class PIDControl:
         ek_1 = setpoint - x_1
         ek_2 = setpoint - x_2
 
+        self.error.append(ek)
+
         du = self.Kp * (ek - ek_1) + self.Ki * ek + self.Kd * (ek - 2 * ek_1 + ek_2)
 
         # Constraints on output of PID
         # control_action = max(0, min(last_u + du, 20))
-        control_action = last_u + du
+        control_action = self.u[-1] + du
 
         # Used to synchronize PID inputs with plant outputs if plant and PID are evaluated at different time periods
         for _ in range(eval_time):
@@ -393,12 +512,21 @@ class PIDControl:
 
         return control_action
 
+    def reset(self):
+        """
+        Description
+             -----
+                Resets the PID input trajectory.
+
+        """
+        self.u = []
+
 
 if __name__ == "__main__":
 
     # Build PID Objects
-    PID1 = PIDControl(kp=1.31, ki=0.21, kd=0)
-    PID2 = PIDControl(kp=-0.28, ki=-0.06, kd=0)
+    PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
+    PID2 = DiscretePIDControl(kp=-0.28, ki=-0.06, kd=0)
 
     # Set initial conditions
     PID1.u = [3.9, 3.9, 3.9, 3.9, 3.9, 3.9, 3.9, 3.9]
@@ -407,7 +535,7 @@ if __name__ == "__main__":
     init_state = np.array([65.13, 42.55, 0.0, 0.0])
     init_input = np.array([3.9, 0.0])
 
-    env = WoodBerryDistillation(nsim=550, x0=init_state, u0=init_input)
+    env = WoodBerryDistillation(nsim=2000, x0=init_state, u0=init_input)
 
     # Starting at time 7 because the largest delay is 7
     input_1 = env.u[0, 0]
@@ -415,37 +543,40 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    for t in range(7, env.Nsim + 1):
+    episodes = 1
 
-        if t % 10000 == 0:
-            print(t)
+    for episode in range(episodes):
 
-        if t % 15 == 0:
-            input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0], env.u[t - 1, 0])
-            input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1], env.u[t - 1, 1])
+        # Resetting environment and PID controllers, add terms to overcome time delay
+        env.reset(rand_init=False)
+        PID1.u = [3.9, 3.9, 3.9, 3.9, 3.9, 3.9, 3.9, 3.9]
+        PID2.u = [0, 0, 0, 0, 0, 0, 0, 0]
 
-        # Set-point change
-        if t == 50:
-            set_point1 = 60
-            # set_point2 += 2
+        input_1 = env.u[0, 0]
+        input_2 = env.u[0, 1]
 
-        # Disturbance
-        # if t % 320 == 0:
-        #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 5, size=(1, 4))
+        for t in range(7, env.Nsim + 1):
 
-        # Actuator Faults
-        if 55 < t:
-            env.actuator_fault(actuator_num=1, actuator_value=13, time=t)
+            if t % 4 == 0:
+                input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
+                input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
-        # Generate input tuple
-        control_input = np.array([[input_1, input_2]])
+            control_input = np.array([[input_1, input_2]])
 
-        # Simulate next time
-        State, Reward, Done, Info = env.step(control_input, t, noise=False)
+            # Set-point change
+            # if t == 350:
+            #     set_point1 = 90
+            #     set_point2 = 10
 
-    env.plots()
-    # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
-    # plt.show()
+            # Disturbance
+            # if 1400 < t < 1450:
+            #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 0.7, size=(1, 4))
 
-    # plt.scatter(PID2.u[40:env.y.shape[0]], env.y[40:, 1])
-    # plt.show()
+            # Actuator Faults
+            # if 1000 < t:
+            #     env.actuator_fault(actuator_num=1, actuator_value=9, time=t, noise=False)
+
+            # Simulate next time
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False)
+
+    env.plots(timestart=0, timestop=2000)
