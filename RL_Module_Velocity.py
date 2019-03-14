@@ -162,16 +162,26 @@ class ReinforceLearning:
 
         self.epsilon = max(self.epsilon, min_eps_rate)
 
-    """
-    UCB Action Selection
-    
-    cur_state: The current state
-    
-    state: The index of the current state
-    action: The optimal action given the state
-    """
+    def action_selection(self, cur_state, last_input, no_decay, ep_greedy, time, min_eps_rate=0.001):
 
-    def ucb_action_selection(self, cur_state):
+        """
+        Selects an action from a list of actions.  Can be either UCB or epsilon-greedy
+
+        state: Current state of the process
+        action: Last performed action
+        last_input: The last state the system was in
+        no_decay:  Amount of time for learning rate and epsilon to not decay
+        ep_greedy:  Whether to perform epsilon greedy action selection or not
+        time: Simulation time
+        min_eps_rate: The minimum epsilon rate.  Default value = 0.001
+
+        control: New set point / value for the item being controlled
+        action:  Action index preformed at current time
+        """
+
+        """
+        UCB action selection portion
+        """
 
         state = self.state_detection(cur_state)
 
@@ -182,24 +192,9 @@ class ReinforceLearning:
                                                                  (self.NT[state, action] + 0.01))
         action = self.rargmax(q_list)
 
-        return state, action
-
-    """
-    Selects an action from a list of actions.  Can be either UCB or epsilon-greedy
-    
-    state: Current state of the process
-    action: Last performed action
-    last_input: The last state the system was in
-    no_decay:  Amount of time for learning rate and epsilon to not decay
-    ep_greedy:  Whether to perform epsilon greedy action selection or not
-    time: Simulation time
-    min_eps_rate: The minimum epsilon rate.  Default value = 0.001
-    
-    control: New set point / value for the item being controlled
-    action:  The action preformed at current time
-    """
-
-    def action_selection(self, state, action, last_input, no_decay, ep_greedy, time, min_eps_rate=0.001):
+        """
+        Regular action selection portion
+        """
 
         # If epsilon greedy action is desired, calculate new epsilon value
         if ep_greedy is True:
@@ -222,7 +217,7 @@ class ReinforceLearning:
         # Update feedback timer
         self.feedback_evaluation(time)
 
-        return control, action
+        return state, control, action
 
     """
     Calculating the learning rate for Reinforcement Learning

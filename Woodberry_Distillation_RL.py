@@ -23,7 +23,7 @@ import random
 from copy import deepcopy
 from scipy.integrate import odeint
 
-from RL_Module import ReinforceLearning
+from RL_Module_Velocity import ReinforceLearning
 
 import gc
 
