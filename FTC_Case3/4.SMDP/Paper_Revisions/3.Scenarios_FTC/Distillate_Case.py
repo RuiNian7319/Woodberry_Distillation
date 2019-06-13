@@ -585,7 +585,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 12001
+    episodes = 1
     rlist = []
 
     for episode in range(episodes):
@@ -614,15 +614,14 @@ if __name__ == "__main__":
         rl.eval = 0
         tracker = 0
 
-        # # Fault mediation time calculation
-        # mediate_start = 0
-        # time_to_mediate = []
+        # Fault mediation time calculation
+        mediate_start = 0
 
         # Valve stuck position
         if episode % 10 == 0:
             valve_pos = 12
         else:
-            valve_pos = np.random.uniform(7, 15.7)
+            valve_pos = 12  # np.random.uniform(7, 13.5)
 
         for t in range(7, env.Nsim + 1):
 
@@ -648,6 +647,7 @@ if __name__ == "__main__":
             # Actuator Faults
             if 355 < t:
                 env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
+                print(t)
 
             # RL Controls
             if 355 < t:
@@ -663,15 +663,15 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
                                                                        env.y[t-1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=True, time=t, min_eps_rate=1)
+                                                                      ep_greedy=False, time=t, min_eps_rate=0.001)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
                     env.time_list.append(t)
 
-                    # # Fault mediation time calculation
-                    # if mediate_start == 0:
-                    #     mediate_start = t
+                    # Fault mediation time calculation
+                    if mediate_start == 0:
+                        mediate_start = t
 
             if 355 < t and t % 4 == 0:
                 input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
@@ -688,10 +688,9 @@ if __name__ == "__main__":
                 rl.eval_feedback = t
                 tau = t - rl.eval
 
-            # # Fault mediation time calculation
-            # if next_state[0] * 0.975 < 100 < next_state[0] * 1.025 and t > 360:
-            #     time_to_mediate.append(t - mediate_start)
-            #     break
+            if next_state[0] * 0.975 < 100 < next_state[0] * 1.025 and t > 360:
+                print(t)
+                break
 
             # Append cumulative reward
             cumu_reward.append(Reward)
