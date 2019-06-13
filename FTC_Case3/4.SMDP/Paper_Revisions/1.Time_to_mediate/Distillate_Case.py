@@ -585,8 +585,11 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 12001
+    episodes = 1001
     rlist = []
+
+    # Mediation time study
+    time_to_mediate = []
 
     for episode in range(episodes):
 
@@ -615,21 +618,20 @@ if __name__ == "__main__":
         tracker = 0
 
         # # Fault mediation time calculation
-        # mediate_start = 0
-        # time_to_mediate = []
+        mediate_start = 0
 
         # Valve stuck position
         if episode % 10 == 0:
-            valve_pos = 12
+            valve_pos = 7.7
         else:
-            valve_pos = np.random.uniform(7, 15.7)
+            valve_pos = 7.7  # np.random.uniform(7, 15.7)
 
         for t in range(7, env.Nsim + 1):
 
             # Maximum possible arrival time
             tau = rl.eval_period
 
-            if t % 4 == 0 and t < 170:
+            if t % 4 == 0 and t <= 355:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
@@ -663,15 +665,15 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
                                                                        env.y[t-1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=True, time=t, min_eps_rate=1)
+                                                                      ep_greedy=False, time=t, min_eps_rate=1)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
                     env.time_list.append(t)
 
-                    # # Fault mediation time calculation
-                    # if mediate_start == 0:
-                    #     mediate_start = t
+                    # Fault mediation time calculation
+                    if mediate_start == 0:
+                        mediate_start = t
 
             if 355 < t and t % 4 == 0:
                 input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
@@ -680,7 +682,7 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=True,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
                                                       economics='mixed', w_y1=1.0, w_y2=0.0)
 
             # # Reached steady state given by RL or system did not reach the state in 30 seconds,
@@ -688,10 +690,10 @@ if __name__ == "__main__":
                 rl.eval_feedback = t
                 tau = t - rl.eval
 
-            # # Fault mediation time calculation
-            # if next_state[0] * 0.975 < 100 < next_state[0] * 1.025 and t > 360:
-            #     time_to_mediate.append(t - mediate_start)
-            #     break
+            # Fault mediation time calculation
+            if 98 < next_state[0] < 102 and t > 363:
+                time_to_mediate.append(t - mediate_start)
+                break
 
             # Append cumulative reward
             cumu_reward.append(Reward)
@@ -712,13 +714,16 @@ if __name__ == "__main__":
                 rl.next_eval = True
 
         # Autosave Q, T, and NT matrices
-        rl.autosave(episode, 300)
-
-        if episode % 10 == 0:
-            print("Episode {} | Current Reward {}".format(episode, np.average(tot_reward)))
-            rlist.append(np.average(tot_reward))
+        # rl.autosave(episode, 300)
+        #
+        # if episode % 10 == 0:
+        #     print("Episode {} | Current Reward {}".format(episode, np.average(tot_reward)))
+        #     rlist.append(np.average(tot_reward))
 
     env.plots(timestart=50, timestop=6000)
+
+    # Save
+    # np.savetxt('8.csv', time_to_mediate, delimiter=',')
 
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
     # plt.show()
