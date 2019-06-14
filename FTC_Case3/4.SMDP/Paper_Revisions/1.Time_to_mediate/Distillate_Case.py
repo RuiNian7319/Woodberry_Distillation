@@ -585,7 +585,7 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 2701
+    episodes = 1001
     rlist = []
 
     # Mediation time study
@@ -610,6 +610,7 @@ if __name__ == "__main__":
         action = set_point2
         action_index = 0
 
+        # Reset the action and time list
         env.action_list = []
         env.time_list = []
 
@@ -669,15 +670,15 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
                                                                        env.y[t-1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=True, time=t, min_eps_rate=0.05)
+                                                                      ep_greedy=False, time=t, min_eps_rate=0.05)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
                     env.time_list.append(t)
 
                     # Fault mediation time calculation
-                    # if mediate_start == 0:
-                    #     mediate_start = t
+                    if mediate_start == 0:
+                        mediate_start = t
 
             if 355 < t and t % 4 == 0:
                 input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
@@ -695,9 +696,9 @@ if __name__ == "__main__":
                 tau = t - rl.eval
 
             # Fault mediation time calculation
-            # if 98 < next_state[0] < 102 and t > 363:
-            #     time_to_mediate.append(t - mediate_start)
-            #     break
+            if 98 < next_state[0] < 102 and t > 363:
+                time_to_mediate.append(t - mediate_start)
+                break
 
             # Append cumulative reward
             cumu_reward.append(Reward)
@@ -718,16 +719,16 @@ if __name__ == "__main__":
                 rl.next_eval = True
 
         # Autosave Q, T, and NT matrices
-        rl.autosave(episode, 300)
-
-        if episode % 10 == 0:
-            print("Episode {} | Current Reward {}".format(episode, np.average(tot_reward)))
-            rlist.append(np.average(tot_reward))
+        # rl.autosave(episode, 300)
+        #
+        # if episode % 10 == 0:
+        #     print("Episode {} | Current Reward {}".format(episode, np.average(tot_reward)))
+        #     rlist.append(np.average(tot_reward))
 
     env.plots(timestart=50, timestop=6000)
 
     # Save
-    # np.savetxt('0.1.csv', time_to_mediate, delimiter=',')
+    np.savetxt('1.csv', time_to_mediate, delimiter=',')
 
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
     # plt.show()

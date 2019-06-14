@@ -21,6 +21,10 @@ C = pd.read_csv('time_data/2.csv', names=['Time'])
 D = pd.read_csv('time_data/4.csv', names=['Time'])
 E = pd.read_csv('time_data/8.csv', names=['Time'])
 
+"""
+Normal plots
+"""
+
 A_mean = np.mean(A)
 B_mean = np.mean(B)
 C_mean = np.mean(C)
@@ -58,7 +62,7 @@ for i in range(len(E)):
 
 data = np.concatenate([A, B, C, D, E]).reshape(-1, 1)
 
-data = pd.DataFrame(data, columns=['Time'])
+data = pd.DataFrame(data, columns=['Time, t (min)'])
 
 num = np.zeros((1000 * 5))
 
@@ -68,8 +72,67 @@ num[2 * 1000:1000 * 3] = 2
 num[3 * 1000:1000 * 4] = 4
 num[4 * 1000:1000 * 5] = 8
 
-data['Fault Magnitude'] = num
+data['Fault Magnitude, F (lb/min)'] = num
 
-sns.lineplot(x='Fault Magnitude', y='Time', data=data)
+"""
+Normalized Plots
+"""
+
+A_mean_norm = np.mean(A) / 1
+B_mean_norm = np.mean(B) / 1
+C_mean_norm = np.mean(C) / 2
+D_mean_norm = np.mean(D) / 3
+E_mean_norm = np.mean(E) / 5
+
+A_std_norm = np.std(A) / 1
+B_std_norm = np.std(B) / 1
+C_std_norm = np.std(C) / 2
+D_std_norm = np.std(D) / 3
+E_std_norm = np.std(E) / 5
+
+A_norm = np.zeros(1000)
+B_norm = np.zeros(1000)
+C_norm = np.zeros(1000)
+D_norm = np.zeros(1000)
+E_norm = np.zeros(1000)
+
+aList = [A_norm, B_norm, C_norm, D_norm, E_norm]
+
+for i in range(len(A_norm)):
+    A_norm[i] = np.random.normal(A_mean_norm, A_std_norm, 1)
+
+for i in range(len(B_norm)):
+    B_norm[i] = np.random.normal(B_mean_norm, B_std_norm, 1)
+
+for i in range(len(C_norm)):
+    C_norm[i] = np.random.normal(C_mean_norm, C_std_norm, 1)
+
+for i in range(len(D_norm)):
+    D_norm[i] = np.random.normal(D_mean_norm, D_std_norm, 1)
+
+for i in range(len(E_norm)):
+    E_norm[i] = np.random.normal(E_mean_norm, E_std_norm, 1)
+
+data_norm = np.concatenate([A_norm, B_norm, C_norm, D_norm, E_norm]).reshape(-1, 1)
+
+data_norm = pd.DataFrame(data_norm, columns=['Time, t (min)'])
+
+data_norm['Fault Magnitude, F (lb/min)'] = num
+
+"""
+Plotting
+"""
+
+sns.lineplot(x='Fault Magnitude, F (lb/min)', y='Time, t (min)', data=data)
+plt.text(5, 69.5, 'Original',
+         color='C0')
+
+sns.lineplot(x='Fault Magnitude, F (lb/min)', y='Time, t (min)', data=data_norm)
+plt.text(5, 25.5, 'Normalized',color='C1')
+
+plt.xlabel(r'Fault Magnitude, \textit{F} (lb/min)')
+plt.ylabel(r'Time, \textit{t} (min)')
+
+plt.savefig('time_to_mediate.pdf', dpi=1000, format='pdf')
 
 plt.show()

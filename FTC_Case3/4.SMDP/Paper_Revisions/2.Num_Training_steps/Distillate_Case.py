@@ -585,8 +585,11 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1
+    episodes = 1001
     rlist = []
+
+    # Mediation time study
+    time_to_mediate = []
 
     for episode in range(episodes):
 
@@ -606,6 +609,11 @@ if __name__ == "__main__":
         state = 0
         action = set_point2
         action_index = 0
+
+        # Reset the action and time list
+        env.action_list = []
+        env.time_list = []
+
         env.action_list.append(set_point2)
         env.time_list.append(0)
 
@@ -619,16 +627,16 @@ if __name__ == "__main__":
 
         # Valve stuck position
         if episode % 10 == 0:
-            valve_pos = 12
+            valve_pos = 14.7
         else:
-            valve_pos = 12  # np.random.uniform(7, 13.5)
+            valve_pos = 14.7  # np.random.uniform(7, 15.7)
 
         for t in range(7, env.Nsim + 1):
 
             # Maximum possible arrival time
             tau = rl.eval_period
 
-            if t % 4 == 0 and t < 170:
+            if t % 4 == 0 and t <= 355:
                 input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
                 input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
 
@@ -647,7 +655,6 @@ if __name__ == "__main__":
             # Actuator Faults
             if 355 < t:
                 env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
-                print(t)
 
             # RL Controls
             if 355 < t:
@@ -663,7 +670,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
                                                                        env.y[t-1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=False, time=t, min_eps_rate=0.001)
+                                                                      ep_greedy=False, time=t, min_eps_rate=0.05)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
@@ -680,7 +687,7 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=True,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
                                                       economics='mixed', w_y1=1.0, w_y2=0.0)
 
             # # Reached steady state given by RL or system did not reach the state in 30 seconds,
@@ -688,8 +695,9 @@ if __name__ == "__main__":
                 rl.eval_feedback = t
                 tau = t - rl.eval
 
-            if next_state[0] * 0.975 < 100 < next_state[0] * 1.025 and t > 360:
-                print(t)
+            # Fault mediation time calculation
+            if 98 < next_state[0] < 102 and t > 363:
+                time_to_mediate.append(t - mediate_start)
                 break
 
             # Append cumulative reward
@@ -711,13 +719,16 @@ if __name__ == "__main__":
                 rl.next_eval = True
 
         # Autosave Q, T, and NT matrices
-        rl.autosave(episode, 300)
-
-        if episode % 10 == 0:
-            print("Episode {} | Current Reward {}".format(episode, np.average(tot_reward)))
-            rlist.append(np.average(tot_reward))
+        # rl.autosave(episode, 300)
+        #
+        # if episode % 10 == 0:
+        #     print("Episode {} | Current Reward {}".format(episode, np.average(tot_reward)))
+        #     rlist.append(np.average(tot_reward))
 
     env.plots(timestart=50, timestop=6000)
+
+    # Save
+    np.savetxt('1.csv', time_to_mediate, delimiter=',')
 
     # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
     # plt.show()
