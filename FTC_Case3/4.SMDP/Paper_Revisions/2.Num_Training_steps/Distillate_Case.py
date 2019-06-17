@@ -577,7 +577,7 @@ if __name__ == "__main__":
     init_state = np.array([65.13, 42.55, 0.0, 0.0])
     init_input = np.array([3.9, 0.0])
 
-    env = WoodBerryDistillation(nsim=1000, x0=init_state, u0=init_input)
+    env = WoodBerryDistillation(nsim=2000, x0=init_state, u0=init_input)
 
     # Starting at time 7 because the largest delay is 7
     input_1 = env.u[0, 0]
@@ -585,11 +585,11 @@ if __name__ == "__main__":
     set_point1 = 100
     set_point2 = 0
 
-    episodes = 1001
-    rlist = []
+    # Number of training steps
+    training_steps = 0
 
-    # Mediation time study
-    time_to_mediate = []
+    episodes = 1000
+    rlist = []
 
     for episode in range(episodes):
 
@@ -622,15 +622,17 @@ if __name__ == "__main__":
         rl.eval = 0
         tracker = 0
 
-        # Fault mediation time calculation
-        mediate_start = 0
-
         # Valve stuck position
         if episode % 10 == 0:
-            valve_pos = 14.7
+            valve_pos = 12
         else:
-            valve_pos = 14.7  # np.random.uniform(7, 15.7)
+            valve_pos = np.random.uniform(7, 15.7)
 
+        if training_steps == 160:
+            print('Broke on episode: {}'.format(episode))
+            break
+
+        # Individual simulation
         for t in range(7, env.Nsim + 1):
 
             # Maximum possible arrival time
@@ -667,18 +669,14 @@ if __name__ == "__main__":
                     # RL evaluation time
                     rl.eval = t
 
-                    state, action, action_index = rl.action_selection([env.y[t-1, 0] - set_point1,
-                                                                       env.y[t-1, 1] - set_point2],
+                    state, action, action_index = rl.action_selection([env.y[t - 1, 0] - set_point1,
+                                                                       env.y[t - 1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=False, time=t, min_eps_rate=0.05)
+                                                                      ep_greedy=True, time=t, min_eps_rate=1.00)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
                     env.time_list.append(t)
-
-                    # Fault mediation time calculation
-                    if mediate_start == 0:
-                        mediate_start = t
 
             if 355 < t and t % 4 == 0:
                 input_2 = PID2(action, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
@@ -687,18 +685,13 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=True,
                                                       economics='mixed', w_y1=1.0, w_y2=0.0)
 
             # # Reached steady state given by RL or system did not reach the state in 30 seconds,
             if next_state[1] * 0.99 < action < next_state[1] * 1.01 and t - rl.eval > 12:
                 rl.eval_feedback = t
                 tau = t - rl.eval
-
-            # Fault mediation time calculation
-            if 98 < next_state[0] < 102 and t > 363:
-                time_to_mediate.append(t - mediate_start)
-                break
 
             # Append cumulative reward
             cumu_reward.append(Reward)
@@ -718,29 +711,16 @@ if __name__ == "__main__":
                 # Define eval period for next state
                 rl.next_eval = True
 
+                # Training steps addition
+                training_steps += 1
+
         # Autosave Q, T, and NT matrices
-        # rl.autosave(episode, 300)
-        #
-        # if episode % 10 == 0:
-        #     print("Episode {} | Current Reward {}".format(episode, np.average(tot_reward)))
-        #     rlist.append(np.average(tot_reward))
+        rl.autosave(episode, 300)
+
+        if episode % 10 == 0:
+            print("Episode {} | Current Reward {} | Training Steps {}".format(episode,
+                                                                              np.average(tot_reward),
+                                                                              training_steps))
+            rlist.append(np.average(tot_reward))
 
     env.plots(timestart=50, timestop=6000)
-
-    # Save
-    np.savetxt('1.csv', time_to_mediate, delimiter=',')
-
-    # plt.scatter(PID1.u[40:env.y.shape[0]], env.y[40:, 0])
-    # plt.show()
-
-    # plt.scatter(PID2.u[40:env.y.shape[0]], env.y[40:, 1])
-    # plt.show()
-
-    # Plots outputs vs inputs
-    # plt.scatter(dU, dY)
-    # plt.xlim([-5, 15])
-    # plt.ylim([-15, 8])
-    # plt.xlabel(r'Change in input, \textit{$\Delta u_1$} (lb/min)')
-    # plt.ylabel(r'Change in output, \textit{$\Delta y_1$} (MeOH wt. \%)')
-    #
-    # plt.show()
