@@ -84,8 +84,8 @@ class WoodBerryDistillation:
     plt.rc('text', usetex=True)
 
     # Random Seeding
-    random.seed(1)
-    np.random.seed(1)
+    # random.seed(1)
+    # np.random.seed(1)
 
     def __repr__(self):
         return "WoodBerryDistillation({}, {}, {})".format(self.nsim, self.x0, self.u0)
@@ -591,7 +591,7 @@ if __name__ == "__main__":
     # Number of training steps
     training_steps = 0
 
-    episodes = 1
+    episodes = 10000
     rlist = []
 
     for episode in range(episodes):
@@ -631,7 +631,7 @@ if __name__ == "__main__":
         else:
             valve_pos = np.random.uniform(7, 15.7)
 
-        if training_steps >= 20000:
+        if training_steps >= 160000:
             print('Broke on episode: {}'.format(episode))
             break
 
@@ -658,11 +658,11 @@ if __name__ == "__main__":
             #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 0.7, size=(1, 4))
 
             # Actuator Faults
-            if 355 < t:
+            if 349 < t:
                 env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
 
             # RL Controls
-            if 355 < t:
+            if 359 < t:
                 if (t % rl.eval_period == 0 or rl.next_eval) and t - rl.eval > 12:
 
                     rl.next_eval = False
@@ -675,7 +675,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t - 1, 0] - set_point1,
                                                                        env.y[t - 1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=False, time=t, min_eps_rate=1.00)
+                                                                      ep_greedy=True, time=t, min_eps_rate=1.00)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
@@ -692,20 +692,20 @@ if __name__ == "__main__":
             control_input = np.array([[input_1, input_2]])
 
             # Simulate next time
-            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=True,
+            next_state, Reward, Done, Info = env.step(control_input, t, setpoint=[set_point1, set_point2], noise=False,
                                                       economics='mixed', w_y1=1.0, w_y2=0.0)
 
-            # Reached steady state given by RL or system did not reach the state in 30 seconds,
+            # # Reached steady state given by RL or system did not reach the state in 30 seconds,
             if next_state[1] * 0.99 < action < next_state[1] * 1.01 and t - rl.eval > 12:
                 rl.eval_feedback = t
                 tau = t - rl.eval
 
             # Fault mediation time calculation
-            if 98 < next_state[0] < 102 and t > 363:
-                time_to_mediate = t - mediate_start
-                print('Time to mediate: {} | RMSE: {}'.format(time_to_mediate,
-                                                              np.sum(env.y[360:t, 0] - set_point1)/(t-360)))
-                break
+            # if 97.5 < next_state[0] < 102 and t > 363:
+            #     time_to_mediate = t - mediate_start
+            #     print('Time to mediate: {} | RMSE: {}'.format(time_to_mediate,
+            #                                                   np.sum(env.y[360:t, 0] - set_point1)))
+            #     break
 
             # Append cumulative reward
             cumu_reward.append(Reward)
@@ -729,7 +729,7 @@ if __name__ == "__main__":
                 training_steps += 1
 
         # Autosave Q, T, and NT matrices
-        rl.autosave(episode, 300)
+        rl.autosave(episode, 100)
 
         if episode % 10 == 0:
             print("Episode {} | Current Reward {:2f} | Training Steps {}".format(episode,
