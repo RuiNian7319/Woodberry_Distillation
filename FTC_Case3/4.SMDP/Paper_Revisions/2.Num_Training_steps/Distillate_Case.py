@@ -559,12 +559,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    # q = np.loadtxt("Q_Matrix.txt")
-    # t = np.loadtxt("T_Matrix.txt")
-    # nt = np.loadtxt("NT_Matrix.txt")
-    #
-    # rl.user_matrices(q, t, nt)
-    # del q, t, nt, actions
+    q = np.loadtxt("Q_Matrix.txt")
+    t = np.loadtxt("T_Matrix.txt")
+    nt = np.loadtxt("NT_Matrix.txt")
+
+    rl.user_matrices(q, t, nt)
+    del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -591,7 +591,7 @@ if __name__ == "__main__":
     # Number of training steps
     training_steps = 0
 
-    episodes = 10000
+    episodes = 100000
     rlist = []
 
     for episode in range(episodes):
@@ -631,7 +631,7 @@ if __name__ == "__main__":
         else:
             valve_pos = np.random.uniform(7, 15.7)
 
-        if training_steps >= 80000:
+        if training_steps >= 160000:
             print('Broke on episode: {}'.format(episode))
             break
 
