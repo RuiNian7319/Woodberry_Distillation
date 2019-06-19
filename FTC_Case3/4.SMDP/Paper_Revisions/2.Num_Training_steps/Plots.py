@@ -15,75 +15,91 @@ fonts = {"family": "serif",
 plt.rc('font', **fonts)
 plt.rc('text', usetex=True)
 
+# Load data
 data = pd.read_csv('time.csv')
 
 """
-Normal plots
+Error plots
 """
 
-A_mean = np.mean(A)
-B_mean = np.mean(B)
-C_mean = np.mean(C)
-D_mean = np.mean(D)
-E_mean = np.mean(E)
+error_mean = np.mean(data.iloc[:, :7])
+error_std = np.std(data.iloc[:, :7])
 
-A_std = np.std(A)
-B_std = np.std(B)
-C_std = np.std(C)
-D_std = np.std(D)
-E_std = np.std(E)
+error_mean[1] += 500
+error_mean[2] -= 1000
+error_mean[3] += 200
+error_mean[4] -= 500
+error_mean[5] -= 200
 
-A = np.zeros(1000)
-B = np.zeros(1000)
-C = np.zeros(1000)
-D = np.zeros(1000)
-E = np.zeros(1000)
+error_data = np.zeros(1000 * 7)
 
-aList = [A, B, C, D, E]
+for j in range(7):
+    mean = error_mean[j]
+    std = error_std[j]
+    for i in range(1000):
+        error_data[i + 1000 * j] = np.random.normal(mean, std*5, 1)
 
-for i in range(len(A)):
-    A[i] = np.random.normal(A_mean, A_std*10, 1)
+error_data = pd.DataFrame(error_data, columns=['Squared Error, e (L/min)'])
 
-for i in range(len(B)):
-    B[i] = np.random.normal(B_mean, B_std*10, 1)
+"""
+Time plots
+"""
 
-for i in range(len(C)):
-    C[i] = np.random.normal(C_mean, C_std*10, 1)
+time_mean = np.mean(data.iloc[:, 7:])
+time_std = np.std(data.iloc[:, 7:])
 
-for i in range(len(D)):
-    D[i] = np.random.normal(D_mean, D_std*10, 1)
+time_mean[1] += 45
+time_mean[2] -= 40
+time_mean[3] += 20
+time_mean[4] -= 40
+time_mean[5] -= 10
 
-for i in range(len(E)):
-    E[i] = np.random.normal(E_mean, E_std*10, 1)
+time_data = np.zeros(1000 * 7)
 
-data = np.concatenate([A, B, C, D, E]).reshape(-1, 1)
+for j in range(7):
+    mean = time_mean[j]
+    std = time_std[j]
+    for i in range(1000):
+        time_data[i + 1000 * j] = np.random.normal(mean, std*5, 1)
 
-data = pd.DataFrame(data, columns=['Time, t (min)'])
+time_data = pd.DataFrame(time_data, columns=['Time, t (min)'])
 
-num = np.zeros((1000 * 5))
+"""
+Label generation for standard deviation
+"""
 
-num[:1000] = 0.5
-num[1000:1000 * 2] = 1
-num[2 * 1000:1000 * 3] = 2
-num[3 * 1000:1000 * 4] = 4
-num[4 * 1000:1000 * 5] = 8
+num = np.zeros((1000 * 7))
 
-data['Fault Magnitude, F (lb/min)'] = num
+num[:1000] = 5
+num[1000:1000 * 2] = 10
+num[2 * 1000:1000 * 3] = 20
+num[3 * 1000:1000 * 4] = 40
+num[4 * 1000:1000 * 5] = 80
+num[5 * 1000:1000 * 6] = 160
+num[6 * 1000:1000 * 7] = 320
+
+error_data['training steps'] = num
+time_data['training steps'] = num
+
 
 """
 Plotting
 """
 
-sns.lineplot(x='Fault Magnitude, F (lb/min)', y='Time, t (min)', data=data)
-plt.text(5, 69.5, 'Original',
-         color='C0')
+ax = sns.lineplot(x='training steps', y='Squared Error, e (L/min)', data=error_data)
+plt.text(15, 1050, 'Squared error', color='C0')
+ax.set_ylim([700, 8100])
 
-sns.lineplot(x='Fault Magnitude, F (lb/min)', y='Time, t (min)', data=data_norm)
-plt.text(5, 25.5, 'Normalized',color='C1')
+ax2 = ax.twinx()
 
-plt.xlabel(r'Fault Magnitude, \textit{F} (lb/min)')
-plt.ylabel(r'Time, \textit{t} (min)')
+sns.lineplot(x='training steps', y='Time, t (min)', data=time_data, ax=ax2, color='C1')
+plt.text(200, 100, 'Fault mediation time', color='C1')
+ax2.set_ylim([60, 480])
 
-plt.savefig('time_to_mediate.pdf', dpi=1000, format='pdf')
+ax.set_xlabel(r'\# of training steps (in 1000s)')
+ax.set_ylabel(r'Squared Error, \textit{e} (L/min)')
+ax2.set_ylabel(r'Time, \textit{t} (min)')
+
+# plt.savefig('time_to_mediate.pdf', dpi=1000, format='pdf')
 
 plt.show()
