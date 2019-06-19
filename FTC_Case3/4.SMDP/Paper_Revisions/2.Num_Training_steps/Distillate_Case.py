@@ -591,7 +591,7 @@ if __name__ == "__main__":
     # Number of training steps
     training_steps = 0
 
-    episodes = 100000
+    episodes = 10000
     rlist = []
 
     for episode in range(episodes):
