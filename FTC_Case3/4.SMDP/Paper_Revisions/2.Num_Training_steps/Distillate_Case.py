@@ -591,7 +591,7 @@ if __name__ == "__main__":
     # Number of training steps
     training_steps = 0
 
-    episodes = 10000
+    episodes = 1
     rlist = []
 
     for episode in range(episodes):
@@ -676,7 +676,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t - 1, 0] - set_point1,
                                                                        env.y[t - 1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=True, time=t, min_eps_rate=1.00)
+                                                                      ep_greedy=False, time=t, min_eps_rate=1.00)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
@@ -702,11 +702,11 @@ if __name__ == "__main__":
                 tau = t - rl.eval
 
             # Fault mediation time calculation
-            # if 97.5 < next_state[0] < 102 and t > 363:
-            #     time_to_mediate = t - mediate_start
-            #     print('Time to mediate: {} | RMSE: {}'.format(time_to_mediate,
-            #                                                   np.sum(env.y[360:t, 0] - set_point1)))
-            #     break
+            if 97.5 < next_state[0] < 102 and t > 363:
+                time_to_mediate = t - mediate_start
+                print('Time to mediate: {} | RMSE: {}'.format(time_to_mediate,
+                                                              np.sum(env.y[360:t, 0] - set_point1)))
+                break
 
             # Append cumulative reward
             cumu_reward.append(Reward)
