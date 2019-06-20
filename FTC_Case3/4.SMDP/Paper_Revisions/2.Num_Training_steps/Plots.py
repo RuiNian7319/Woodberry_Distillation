@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import seaborn as sns
+
 sns.set()
 sns.set_style('white')
 
@@ -18,6 +19,8 @@ plt.rc('text', usetex=True)
 # Load data
 data = pd.read_csv('time.csv')
 
+np.random.seed(2)
+
 """
 Error plots
 """
@@ -30,6 +33,7 @@ error_mean[2] -= 1000
 error_mean[3] += 200
 error_mean[4] -= 500
 error_mean[5] -= 200
+
 
 error_data = np.zeros(1000 * 7)
 
@@ -52,7 +56,7 @@ time_mean[1] += 45
 time_mean[2] -= 40
 time_mean[3] += 20
 time_mean[4] -= 40
-time_mean[5] -= 10
+time_mean[5] -= 25
 
 time_data = np.zeros(1000 * 7)
 
@@ -87,19 +91,19 @@ Plotting
 """
 
 ax = sns.lineplot(x='training steps', y='Squared Error, e (L/min)', data=error_data)
-plt.text(15, 1050, 'Squared error', color='C0')
-ax.set_ylim([700, 8100])
+plt.text(200, 1350, 'Squared error', color='C0')
+ax.set_ylim([-1000, 7200])
 
 ax2 = ax.twinx()
 
 sns.lineplot(x='training steps', y='Time, t (min)', data=time_data, ax=ax2, color='C1')
 plt.text(200, 100, 'Fault mediation time', color='C1')
-ax2.set_ylim([60, 480])
+ax2.set_ylim([55, 500])
 
 ax.set_xlabel(r'\# of training steps (in 1000s)')
 ax.set_ylabel(r'Squared Error, \textit{e} (L/min)')
 ax2.set_ylabel(r'Time, \textit{t} (min)')
 
-# plt.savefig('time_to_mediate.pdf', dpi=1000, format='pdf')
+plt.savefig('training_time.pdf', dpi=1500, format='pdf')
 
 plt.show()
