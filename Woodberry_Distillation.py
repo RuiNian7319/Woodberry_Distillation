@@ -558,8 +558,10 @@ if __name__ == "__main__":
         for t in range(7, env.Nsim + 1):
 
             if t % 4 == 0:
-                input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
-                input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
+                # input_1 = PID1(set_point1, env.y[t - 1, 0], env.y[t - 2, 0], env.y[t - 3, 0])
+                # input_2 = PID2(set_point2, env.y[t - 1, 1], env.y[t - 2, 1], env.y[t - 3, 1])
+                input_1 = 15.7
+                input_2 = 5.337
 
             control_input = np.array([[input_1, input_2]])
 

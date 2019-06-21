@@ -554,7 +554,7 @@ if __name__ == "__main__":
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.linspace(-10, 10, 21)
+    actions = np.linspace(-10, 10, 41)
 
     rl.user_actions(actions)
 
@@ -631,10 +631,10 @@ if __name__ == "__main__":
         else:
             valve_pos = 12  # np.random.uniform(7, 15.7)
 
-        if training_steps >= 20000:
-            print('Broke on episode: {}'.format(episode))
-            rl.autosave(episode, episode)
-            break
+        # if training_steps >= 20000:
+        #     print('Broke on episode: {}'.format(episode))
+        #     rl.autosave(episode, episode)
+        #     break
 
         # Individual simulation
         for t in range(7, env.Nsim + 1):
@@ -659,7 +659,7 @@ if __name__ == "__main__":
             #     env.x[t - 1, :] = env.x[t - 1, :] + np.random.normal(0, 0.7, size=(1, 4))
 
             # Actuator Faults
-            if 349 < t:
+            if 340 < t:
                 env.actuator_fault(actuator_num=1, actuator_value=valve_pos, time=t, noise=False)
 
             # RL Controls
@@ -676,7 +676,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t - 1, 0] - set_point1,
                                                                        env.y[t - 1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=False, time=t, min_eps_rate=1.00)
+                                                                      ep_greedy=False, time=t, min_eps_rate=0.2)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
@@ -704,9 +704,9 @@ if __name__ == "__main__":
             # Fault mediation time calculation
             if 97.5 < next_state[0] < 102 and t > 363:
                 time_to_mediate = t - mediate_start
-                print('Time to mediate: {} | RMSE: {}'.format(time_to_mediate,
-                                                              np.sum(env.y[360:t, 0] - set_point1)))
-                break
+                print('Time to mediate: {} | RMSE: {} | t: {}'.format(time_to_mediate,
+                                                                      np.sum(env.y[360:t, 0] - set_point1), t))
+                # break
 
             # Append cumulative reward
             cumu_reward.append(Reward)
@@ -738,4 +738,4 @@ if __name__ == "__main__":
                                                                                  training_steps))
             rlist.append(np.average(tot_reward))
 
-    env.plots(timestart=50, timestop=6000)
+    env.plots(timestart=330, timestop=500)
