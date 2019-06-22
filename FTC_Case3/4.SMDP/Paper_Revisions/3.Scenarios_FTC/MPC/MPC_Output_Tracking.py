@@ -155,14 +155,20 @@ def simulation():
 
     for t in range(10, model_plant.Nsim + 1):
 
+        # How often to evaluate MPC
+        eval_time = 15
+
         # Initial 355 minutes of simulation
-        if t % 15 == 0 and t <= 340:
+        if t % eval_time == 0 and t <= 340:
             # Solve the MPC optimization problem, obtain current input and predicted state
             model_control.u[t, :], model_control.x[t, :] = control.solve_mpc(model_plant.x, model_plant.xsp,
                                                                              mpc_control, t, control.p)
 
         # Evaluate FT-MPC
-        elif t % 15 == 0 and t > 359:
+        elif t % eval_time == 0 and t > 359:
+            # Introduce noise in states
+            # model_plant.x += np.random.uniform(-5, 5)
+
             # Solve the MPC optimization problem, obtain current input and predicted state
             model_control.u[t, :], model_control.x[t, :] = ftc_control.solve_mpc(model_plant.x, model_plant.xsp,
                                                                                  ftc_mpc_control, t, control.p)
@@ -173,7 +179,7 @@ def simulation():
             model_control.x[t, :] = model_control.x[t - 1, :]
 
         # Convert model output to a setpoint
-        if t % 15 == 0:
+        if t % eval_time == 0:
             set_point1 = 0.7665 * model_control.x[t, 0] - 0.9 * model_control.x[t, 2]
             set_point2 = 0.6055 * model_control.x[t, 1] - 1.3472 * model_control.x[t, 3]
 
@@ -201,9 +207,9 @@ def simulation():
             input_2 = PID2(set_point2, model_plant.y[t - 1, 1], model_plant.y[t - 2, 1], model_plant.y[t - 3, 1])
 
         # Fault occurs at 340
-        if 347 <= t < 360:
+        if 347 <= t < 363:
             control_input = np.array([12, 12, 5.337, 5.337])
-        elif t >= 360:
+        elif t >= 363:
             control_input = np.array([12, 12, input_2, input_2])
         else:
             control_input = np.array([15.7, 15.7, 5.337, 5.337])
