@@ -536,7 +536,7 @@ if __name__ == "__main__":
     # Build RL Objects
     rl = ReinforceLearning(discount_factor=0.95, states_start=300, states_stop=340, states_interval=0.5,
                            actions_start=-15, actions_stop=15, actions_interval=2.5, learning_rate=0.5,
-                           epsilon=0.2, doe=1.2, eval_period=15)
+                           epsilon=0.2, doe=1.2, eval_period=20)
 
     # Building states for the problem, states will be the tracking errors
     states = []
@@ -559,12 +559,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    # q = np.loadtxt("Q_Matrix.txt")
-    # t = np.loadtxt("T_Matrix.txt")
-    # nt = np.loadtxt("NT_Matrix.txt")
-    #
-    # rl.user_matrices(q, t, nt)
-    # del q, t, nt, actions
+    q = np.loadtxt("Q_Matrix.txt")
+    t = np.loadtxt("T_Matrix.txt")
+    nt = np.loadtxt("NT_Matrix.txt")
+
+    rl.user_matrices(q, t, nt)
+    del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -591,7 +591,7 @@ if __name__ == "__main__":
     # Number of training steps
     training_steps = 0
 
-    episodes = 1
+    episodes = 10001
     rlist = []
 
     for episode in range(episodes):
@@ -676,7 +676,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t - 1, 0] - set_point1,
                                                                        env.y[t - 1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=True, time=t, min_eps_rate=0.2)
+                                                                      ep_greedy=True, time=t, min_eps_rate=0.5)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)

@@ -238,8 +238,8 @@ def simulation():
             model_plant.u = deepcopy(model_control.u)
 
     # Plots the output
-    plt.plot(model_plant.y[330:500, 0])
-    plt.plot(model_plant.y[330:500, 1])
+    plt.plot(model_plant.y[330:1000, 0])
+    plt.plot(model_plant.y[330:1000, 1])
 
     plt.show()
 
