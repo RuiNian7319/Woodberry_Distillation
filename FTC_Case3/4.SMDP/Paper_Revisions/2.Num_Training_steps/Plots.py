@@ -101,7 +101,7 @@ plt.text(200, 100, 'Fault mediation time', color='C1')
 ax2.set_ylim([55, 500])
 
 ax.set_xlabel(r'\# of training steps (in 1000s)')
-ax.set_ylabel(r'Squared Error, \textit{e} (L/min)')
+ax.set_ylabel(r'Squared Error, \textit{e}')
 ax2.set_ylabel(r'Time, \textit{t} (min)')
 
 plt.savefig('training_time.pdf', dpi=1500, format='pdf')

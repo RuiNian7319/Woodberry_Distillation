@@ -536,7 +536,7 @@ if __name__ == "__main__":
     # Build RL Objects
     rl = ReinforceLearning(discount_factor=0.95, states_start=300, states_stop=340, states_interval=0.5,
                            actions_start=-15, actions_stop=15, actions_interval=2.5, learning_rate=0.5,
-                           epsilon=0.2, doe=1.2, eval_period=20)
+                           epsilon=0.2, doe=1.2, eval_period=15)
 
     # Building states for the problem, states will be the tracking errors
     states = []
@@ -591,7 +591,7 @@ if __name__ == "__main__":
     # Number of training steps
     training_steps = 0
 
-    episodes = 10001
+    episodes = 1
     rlist = []
 
     for episode in range(episodes):
@@ -676,7 +676,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t - 1, 0] - set_point1,
                                                                        env.y[t - 1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=True, time=t, min_eps_rate=0.5)
+                                                                      ep_greedy=False, time=t, min_eps_rate=0.5)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
@@ -702,10 +702,10 @@ if __name__ == "__main__":
                 tau = t - rl.eval
 
             # Fault mediation time calculation
-            # if 97.5 < next_state[0] < 102 and t > 363:
-            #     time_to_mediate = t - mediate_start
-            #     print('Time to mediate: {} | RMSE: {} | t: {}'.format(time_to_mediate,
-            #                                                           np.sum(env.y[360:t, 0] - set_point1), t))
+            if 97.5 < next_state[0] < 102 and t > 363:
+                time_to_mediate = t - mediate_start
+                print('Time to mediate: {} | RMSE: {} | t: {}'.format(time_to_mediate,
+                                                                      np.sum(env.y[360:t, 0] - set_point1), t))
                 # break
 
             # Append cumulative reward
