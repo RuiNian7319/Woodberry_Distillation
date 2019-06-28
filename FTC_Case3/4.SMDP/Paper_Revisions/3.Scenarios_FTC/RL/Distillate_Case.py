@@ -27,6 +27,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import random
+import os
 
 from copy import deepcopy
 from scipy.integrate import odeint
@@ -40,6 +41,14 @@ sys.path.insert(0, '/home/rui/Documents/Imperial_Oil/IOL_Fault_Tolerant_Control/
 sys.path.insert(0, '/Users/ruinian/Documents/MATLAB/Woodberry_Distillation')
 
 from RL_Module_Velocity_MIMO_SMDP import ReinforceLearning
+
+
+def restart_program():
+    """Restarts the current program.
+    Note: this function does not return. Any cleanup action (like
+    saving data) must be done before calling this function."""
+    python = sys.executable
+    os.execl(python, python, * sys.argv)
 
 
 class WoodBerryDistillation:
@@ -108,6 +117,11 @@ class WoodBerryDistillation:
         self.B = np.array([[1, 0], [1, 0], [0, 1], [0, 1]])
         self.C = np.array([[0.7665, 0, -0.9, 0], [0, 0.6055, 0, -1.3472]])
         self.D = 0
+
+        # Offset Models: 1, 2, 5
+        # self.A = np.array([[-0.0605, 0, 0, 0], [0, -0.0926, 0, 0], [0, 0, -0.0481, 0], [0, 0, 0, -0.0701]])
+        # self.A = np.array([[-0.061098, 0, 0, 0], [0, -0.093534, 0, 0], [0, 0, -0.048552, 0], [0, 0, 0, -0.070788]])
+        # self.A = np.array([[-0.0629, 0, 0, 0], [0, -0.0963, 0, 0], [0, 0, -0.05, 0], [0, 0, 0, -0.0729]])
 
         # Output, state, and input trajectories
         self.y = np.zeros((nsim + 1, 2))
@@ -631,10 +645,10 @@ if __name__ == "__main__":
         else:
             valve_pos = 12  # np.random.uniform(7, 15.7)
 
-        # if training_steps >= 20000:
-        #     print('Broke on episode: {}'.format(episode))
-        #     rl.autosave(episode, episode)
-        #     break
+        if training_steps >= 320000:
+            print('Broke on episode: {}.  Saving'.format(episode))
+            rl.autosave(episode, episode, custom_name=int(np.random.uniform(0, 100)))
+            restart_program()
 
         # Individual simulation
         for t in range(7, env.Nsim + 1):
@@ -676,7 +690,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t - 1, 0] - set_point1,
                                                                        env.y[t - 1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=False, time=t, min_eps_rate=0.5)
+                                                                      ep_greedy=False, time=t, min_eps_rate=1.0)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)

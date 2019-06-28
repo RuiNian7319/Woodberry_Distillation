@@ -295,18 +295,24 @@ class ReinforceLearning:
         """
         self.eval_feedback = time + self.eval_period - 1
 
-    def autosave(self, sim_time, time):
+    def autosave(self, sim_time, time, custom_name=None):
         """
         Auto save Q, T, and NT matrices
 
         sim_time: Current time step in simulation
         time: After this many time steps, auto save the Q, T and NT matrices
+        custom_name:  Custom names for the matrices
         """
         if sim_time % time == 0 and sim_time != 0:
             print("Auto-saving...       Iteration number: ", sim_time)
-            np.savetxt("Q_Matrix.txt", self.Q)
-            np.savetxt("T_Matrix.txt", self.T)
-            np.savetxt("NT_Matrix.txt", self.NT)
+            if custom_name is None:
+                np.savetxt("Q_Matrix.txt", self.Q)
+                np.savetxt("T_Matrix.txt", self.T)
+                np.savetxt("NT_Matrix.txt", self.NT)
+            else:
+                np.savetxt('Q_Matrix_{}.txt'.format(custom_name), self.Q)
+                np.savetxt('T_Matrix_{}.txt'.format(custom_name), self.T)
+                np.savetxt('NT_Matrix_{}.txt'.format(custom_name), self.NT)
 
     def interpolation(self, x):
         """

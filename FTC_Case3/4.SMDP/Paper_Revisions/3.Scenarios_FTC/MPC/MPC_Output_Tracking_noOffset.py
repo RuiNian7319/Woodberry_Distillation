@@ -7,7 +7,7 @@ sys.path.insert(0, '/home/rui/Documents/Research/Modules')
 
 from copy import deepcopy
 from Woodberry_CasaDI import WoodberryDistillation
-from Local_MPC_Module import ModelPredictiveControl
+from MPC_Module_Discounted_NoOffset import ModelPredictiveControl
 
 
 class DiscretePIDControl:
@@ -142,9 +142,9 @@ def simulation():
 
     # Build FTC-MPC Object
     ftc_control = ModelPredictiveControl(model_control.Nsim, 10, model_control.Nx, model_control.Nu, 1, 0.0, 0.0,
-                                         np.array([200.33, 130.86, 60.87, 41.74]), model_control.us,
+                                         ss_states=np.array([200.33, 130.86, 62.23, 40.74]), ss_inputs=model_control.us,
                                          eval_time=15, dist=False, gamma=0.9,
-                                         upp_u_const=[12.1, 12.1, 99, 99], low_u_const=[11.9, 11.9, 0, 0],
+                                         upp_u_const=[12, 12, 99, 99], low_u_const=[12, 12, 0, 0],
                                          upp_x_const=[1000, 1000, 1000, 1000],
                                          low_x_const=[-1000, -1000, -1000, -1000])
 
@@ -153,16 +153,22 @@ def simulation():
                                                      x0=model_control.x0,
                                                      verbosity=0, random_guess=False)
 
-    for t in range(7, model_plant.Nsim + 1):
+    for t in range(10, model_plant.Nsim + 1):
+
+        # How often to evaluate MPC
+        eval_time = 15
 
         # Initial 355 minutes of simulation
-        if t % 15 == 0 and t <= 340:
+        if t % eval_time == 0 and t <= 340:
             # Solve the MPC optimization problem, obtain current input and predicted state
             model_control.u[t, :], model_control.x[t, :] = control.solve_mpc(model_plant.x, model_plant.xsp,
                                                                              mpc_control, t, control.p)
 
         # Evaluate FT-MPC
-        elif t % 15 == 0 and t > 359:
+        elif t % eval_time == 0 and t > 359:
+            # Introduce noise in states
+            # model_plant.x += np.random.uniform(-5, 5)
+
             # Solve the MPC optimization problem, obtain current input and predicted state
             model_control.u[t, :], model_control.x[t, :] = ftc_control.solve_mpc(model_plant.x, model_plant.xsp,
                                                                                  ftc_mpc_control, t, control.p)
@@ -173,7 +179,7 @@ def simulation():
             model_control.x[t, :] = model_control.x[t - 1, :]
 
         # Convert model output to a setpoint
-        if t % 15 == 0:
+        if t % eval_time == 0:
             set_point1 = 0.7665 * model_control.x[t, 0] - 0.9 * model_control.x[t, 2]
             set_point2 = 0.6055 * model_control.x[t, 1] - 1.3472 * model_control.x[t, 3]
 
@@ -191,23 +197,25 @@ def simulation():
         set_point1_list.append(set_point1)
         set_point2_list.append(set_point2)
 
+        if t < 360:
+            set_point1 = 100
+            set_point2 = 0
+
         if t % 4 == 0:
             input_1 = PID1(set_point1, model_plant.y[t - 1, 0],
                            model_plant.y[t - 2, 0], model_plant.y[t - 3, 0])
             input_2 = PID2(set_point2, model_plant.y[t - 1, 1], model_plant.y[t - 2, 1], model_plant.y[t - 3, 1])
 
         # Fault occurs at 340
-        if t >= 340:
+        if 347 <= t < 363:
+            control_input = np.array([12, 12, 5.337, 5.337])
+        elif t >= 363:
             control_input = np.array([12, 12, input_2, input_2])
         else:
-            control_input = np.array([15.7, 15.7, input_2, input_2])
+            control_input = np.array([15.7, 15.7, 5.337, 5.337])
 
         # Calculate the next states for the plant
         model_plant.x[t, :] = model_plant.system_sim.sim(model_plant.x[t - 1, :], control_input)
-
-        if 101 > model_plant.y[t, 0] > 99:
-            print('wat')
-            print('The cost is: {}'.format(np.sum(model_plant.y[360:t, 0] - 100)))
 
         # Populate the output values for model and control
         model_control.y[t, 0] = model_control.C[0, 0]*model_control.x[t, 0]+model_control.C[0, 2]*model_control.x[t, 2]
@@ -215,6 +223,11 @@ def simulation():
 
         model_plant.y[t, 0] = model_plant.C[0, 0] * model_plant.x[t, 0] + model_plant.C[0, 2] * model_plant.x[t, 2]
         model_plant.y[t, 1] = model_plant.C[1, 1] * model_plant.x[t, 1] + model_plant.C[1, 3] * model_plant.x[t, 3]
+
+        if 98 < model_plant.y[t, 0] < 102 and t > 390:
+            print('Time to mediate: {} | RMSE: {} | t: {} | Value: {:2f}'.format(t - 360,
+                                                                          np.sum(np.abs(model_plant.y[360:t, 0] - 100)),
+                                                                          t, model_plant.y[t, 0]))
 
         # Update the P parameters for offset-free control
         control.p = model_plant.x[t, :] - model_control.x[t, 0:model_plant.Nx]
@@ -225,8 +238,8 @@ def simulation():
             model_plant.u = deepcopy(model_control.u)
 
     # Plots the output
-    plt.plot(model_plant.y[50:, 0])
-    plt.plot(model_plant.y[50:, 1])
+    plt.plot(model_plant.y[330:1000, 0])
+    plt.plot(model_plant.y[330:1000, 1])
 
     plt.show()
 

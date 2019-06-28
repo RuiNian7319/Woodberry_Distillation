@@ -37,7 +37,7 @@ class WoodberryDistillation:
         self.R = r_cost * np.eye(self.Nu)
 
         # State space model
-        self.A = np.array([[-0.0599, 0, 0, 0], [0, -0.0917, 0, 0], [0, 0, -0.0476, 0], [0, 0, 0, -0.0694]])
+        self.A = np.array([[-0.061098, 0, 0, 0], [0, -0.093534, 0, 0], [0, 0, -0.048552, 0], [0, 0, 0, -0.070788]])
         self.B = np.array([[1, 0], [1, 0], [0, 1], [0, 1]])
         self.C = np.array([[0.7665, 0, -0.9, 0], [0, 0.6055, 0, -1.3472]])
         self.D = 0
