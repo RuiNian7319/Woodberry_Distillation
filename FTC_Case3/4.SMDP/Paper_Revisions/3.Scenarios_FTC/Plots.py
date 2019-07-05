@@ -74,24 +74,27 @@ RL_data['time'] = num
 RL_data.iloc[341:, 0] += 0.25
 
 # Plotting
-# plt.plot(normal[200:, 0], label='Perfect model (MPC)')
-# plt.plot(not_tuned[200:, 0], label='Perfect model (not tuned - MPC)')
+plt.plot(normal[200:, 0], label='Perfect model (MPC)')
+plt.plot(not_tuned[200:, 0], label='Perfect model (not tuned - MPC)')
 # plt.plot(plus1[200:, 0], label=r'1\% Offset (MPC)')
 # plt.plot(plus2[200:, 0], label=r'2\% Offset (MPC)')
-# plt.plot(plus5[200:, 0], label=r'5\% Offset (MPC)')
-# plt.plot(noDetect[200:, 0], label='No fault detection (MPC)')
+plt.plot(plus5[200:, 0], label=r'5\% Offset (MPC)')
+plt.plot(noDetect[200:, 0], label='No fault detection (MPC)')
 
 sns.lineplot(x='time', y='X', data=RL_data, label='RL-FTC')
 
-plt.axhline(y=100, color='red', linestyle='dashed')
+plt.axhline(y=100.1, color='red', linestyle='dashed')
 
 plt.xlabel(r'Time, \textit{t} (mins)')
 plt.ylabel(r'\%MeOH, $\textit{X}_D$ (wt. \%)')
 
-# plt.text(x=750, y=102, s='Optimal setpoint', color='red')
+plt.text(x=750, y=102, s='Optimal setpoint', color='red')
+# plt.text(x=1250, y=97, s='RL-FTC', color='C0')
 
-# plt.ylim([50, 106])
+# plt.ylim([72, 103.5])
 
 plt.legend(frameon=False)
+
+plt.savefig('FTC_Comparison.pdf', format='pdf', dpi=1500)
 
 plt.show()
