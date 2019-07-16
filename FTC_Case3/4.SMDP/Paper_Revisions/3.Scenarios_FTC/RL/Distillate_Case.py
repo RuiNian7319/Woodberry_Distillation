@@ -573,12 +573,12 @@ if __name__ == "__main__":
     rl.user_actions(actions)
 
     # Load Q, T, and NT matrices from previous training
-    q = np.loadtxt("Q_Matrix.txt")
-    t = np.loadtxt("T_Matrix.txt")
-    nt = np.loadtxt("NT_Matrix.txt")
-
-    rl.user_matrices(q, t, nt)
-    del q, t, nt, actions
+    # q = np.loadtxt("Q_Matrix.txt")
+    # t = np.loadtxt("T_Matrix.txt")
+    # nt = np.loadtxt("NT_Matrix.txt")
+    #
+    # rl.user_matrices(q, t, nt)
+    # del q, t, nt, actions
 
     # Build PID Objects
     PID1 = DiscretePIDControl(kp=1.31, ki=0.21, kd=0)
@@ -605,7 +605,7 @@ if __name__ == "__main__":
     # Number of training steps
     training_steps = 0
 
-    episodes = 1
+    episodes = 25000
     rlist = []
 
     for episode in range(episodes):
@@ -643,9 +643,9 @@ if __name__ == "__main__":
         if episode % 10 == 0:
             valve_pos = 12
         else:
-            valve_pos = 12  # np.random.uniform(7, 15.7)
+            valve_pos = np.random.uniform(7, 15.7)
 
-        if training_steps >= 320000:
+        if training_steps >= 500000:
             print('Broke on episode: {}.  Saving'.format(episode))
             rl.autosave(episode, episode, custom_name=int(np.random.uniform(0, 100)))
             restart_program()
@@ -690,7 +690,7 @@ if __name__ == "__main__":
                     state, action, action_index = rl.action_selection([env.y[t - 1, 0] - set_point1,
                                                                        env.y[t - 1, 1] - set_point2],
                                                                       env.action_list[-1], no_decay=25,
-                                                                      ep_greedy=False, time=t, min_eps_rate=1.0)
+                                                                      ep_greedy=True, time=t, min_eps_rate=1.0)
 
                     # To see how well the PID is tracking RL
                     env.action_list.append(action)
@@ -716,11 +716,11 @@ if __name__ == "__main__":
                 tau = t - rl.eval
 
             # Fault mediation time calculation
-            if 97.5 < next_state[0] < 102 and t > 363:
-                time_to_mediate = t - mediate_start
-                print('Time to mediate: {} | RMSE: {} | t: {}'.format(time_to_mediate,
-                                                                      np.sum(env.y[360:t, 0] - set_point1), t))
-                # break
+            # if 97.5 < next_state[0] < 102 and t > 363:
+            #     time_to_mediate = t - mediate_start
+            #     print('Time to mediate: {} | RMSE: {} | t: {}'.format(time_to_mediate,
+            #                                                           np.sum(env.y[360:t, 0] - set_point1), t))
+            #     break
 
             # Append cumulative reward
             cumu_reward.append(Reward)
@@ -733,7 +733,7 @@ if __name__ == "__main__":
                 cumu_reward = []
 
                 rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5,
-                                 min_learn_rate=0.0005, tau=tau)
+                                 min_learn_rate=0.01, tau=tau)
 
                 tot_reward.append(reward_rate)
 
@@ -746,7 +746,7 @@ if __name__ == "__main__":
         # Autosave Q, T, and NT matrices
         rl.autosave(episode, 100)
 
-        if episode % 10 == 0:
+        if episode % 1000 == 0:
             print("Episode {} | Current Reward {:2f} | Training Steps {}".format(episode,
                                                                                  np.average(tot_reward),
                                                                                  training_steps))

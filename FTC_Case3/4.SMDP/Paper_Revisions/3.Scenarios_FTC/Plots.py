@@ -19,6 +19,26 @@ plt.rc('text', usetex=True)
 np.random.seed(2)
 
 """
+Cost & mediation time calculator
+"""
+
+
+def cost_calc(vector):
+    cost = 0
+    for i in range(360, 600):
+        cost += np.abs(100 - vector[i, 0])
+
+    return cost
+
+
+def med_time(vector):
+    for i in range(360, 600):
+        if 98.2 < vector[i, 0] < 101.8 and 98.2 < vector[i + 10, 0] < 101.8:
+            print(i)
+            break
+
+
+"""
 Load MPC trajectories
 """
 
