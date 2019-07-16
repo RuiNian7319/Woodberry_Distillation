@@ -744,7 +744,7 @@ if __name__ == "__main__":
                 training_steps += 1
 
         # Autosave Q, T, and NT matrices
-        rl.autosave(episode, 100)
+        rl.autosave(episode, 1000)
 
         if episode % 1000 == 0:
             print("Episode {} | Current Reward {:2f} | Training Steps {}".format(episode,
