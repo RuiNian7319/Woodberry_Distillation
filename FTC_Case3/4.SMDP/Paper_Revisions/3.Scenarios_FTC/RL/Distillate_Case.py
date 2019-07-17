@@ -555,11 +555,13 @@ if __name__ == "__main__":
     # Building states for the problem, states will be the tracking errors
     states = []
 
-    rl.x1 = np.zeros(28)
-    rl.x1[0:28] = np.linspace(-20, 20, 28)
+    rl.x1 = np.zeros(41)
+    rl.x1[0:41] = np.linspace(-20, 20, 41)
 
-    rl.x2 = np.zeros(28)
-    rl.x2[0:28] = np.linspace(-20, 20, 28)
+    # rl.x2 = np.zeros(28)
+    # rl.x2[0:28] = np.linspace(-20, 20, 28)
+
+    rl.x2 = np.zeros(1)
 
     for x1 in rl.x1:
         for x2 in rl.x2:
@@ -568,7 +570,7 @@ if __name__ == "__main__":
     rl.user_states(list(states))
 
     # Building actions for the problem, actions will be inputs of u2
-    actions = np.linspace(-10, 10, 41)
+    actions = np.linspace(-10, 10, 21)
 
     rl.user_actions(actions)
 
@@ -605,7 +607,7 @@ if __name__ == "__main__":
     # Number of training steps
     training_steps = 0
 
-    episodes = 25000
+    episodes = 100000
     rlist = []
 
     for episode in range(episodes):
@@ -645,7 +647,7 @@ if __name__ == "__main__":
         else:
             valve_pos = np.random.uniform(7, 15.7)
 
-        if training_steps >= 500000:
+        if training_steps >= 320000:
             print('Broke on episode: {}.  Saving'.format(episode))
             rl.autosave(episode, episode, custom_name=int(np.random.uniform(0, 100)))
             restart_program()
@@ -733,7 +735,7 @@ if __name__ == "__main__":
                 cumu_reward = []
 
                 rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5,
-                                 min_learn_rate=0.01, tau=tau)
+                                 min_learn_rate=0.05, tau=tau)
 
                 tot_reward.append(reward_rate)
 

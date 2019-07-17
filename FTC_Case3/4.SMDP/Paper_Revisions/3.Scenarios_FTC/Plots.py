@@ -111,10 +111,10 @@ plt.ylabel(r'\%MeOH, $\textit{X}_D$ (wt. \%)')
 plt.text(x=750, y=102, s='Optimal setpoint', color='red')
 # plt.text(x=1250, y=97, s='RL-FTC', color='C0')
 
-# plt.ylim([72, 103.5])
+# plt.ylim([97, 103.5])
 
 plt.legend(frameon=False)
 
-plt.savefig('FTC_Comparison.pdf', format='pdf', dpi=1500)
+# plt.savefig('FTC_Comparison.pdf', format='pdf', dpi=1500)
 
 plt.show()
