@@ -551,7 +551,7 @@ if __name__ == "__main__":
     # Build RL Objects
     rl = ReinforceLearning(discount_factor=0.95, states_start=300, states_stop=340, states_interval=0.5,
                            actions_start=-15, actions_stop=15, actions_interval=2.5, learning_rate=0.5,
-                           epsilon=0.2, doe=1.2, eval_period=15, beta=1)
+                           epsilon=0.2, doe=1.2, eval_period=15, beta=0.04)
 
     # Building states for the problem, states will be the tracking errors
     states = []

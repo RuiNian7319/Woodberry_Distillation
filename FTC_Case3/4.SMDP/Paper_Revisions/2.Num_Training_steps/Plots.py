@@ -34,6 +34,8 @@ error_mean[3] += 200
 error_mean[4] -= 500
 error_mean[5] -= 200
 
+error_mean = np.sqrt(error_mean)
+error_std = np.sqrt(error_std)
 
 error_data = np.zeros(1000 * 7)
 
@@ -41,7 +43,7 @@ for j in range(7):
     mean = error_mean[j]
     std = error_std[j]
     for i in range(1000):
-        error_data[i + 1000 * j] = np.random.normal(mean, std*5, 1)
+        error_data[i + 1000 * j] = np.random.normal(mean, std, 1)
 
 error_data = pd.DataFrame(error_data, columns=['Squared Error, e (L/min)'])
 
@@ -64,7 +66,7 @@ for j in range(7):
     mean = time_mean[j]
     std = time_std[j]
     for i in range(1000):
-        time_data[i + 1000 * j] = np.random.normal(mean, std*5, 1)
+        time_data[i + 1000 * j] = np.random.normal(mean, std * 5, 1)
 
 time_data = pd.DataFrame(time_data, columns=['Time, t (min)'])
 
@@ -91,8 +93,8 @@ Plotting
 """
 
 ax = sns.lineplot(x='training steps', y='Squared Error, e (L/min)', data=error_data)
-plt.text(200, 1350, 'Squared error', color='C0')
-ax.set_ylim([-1000, 7200])
+plt.text(200, 38, 'Squared error', color='C0')
+ax.set_ylim([0, 100])
 
 ax2 = ax.twinx()
 
@@ -101,7 +103,7 @@ plt.text(200, 100, 'Fault mediation time', color='C1')
 ax2.set_ylim([55, 500])
 
 ax.set_xlabel(r'\# of training steps (in 1000s)')
-ax.set_ylabel(r'Squared Error, \textit{e}')
+ax.set_ylabel(r'RMSE, \textit{e}')
 ax2.set_ylabel(r'Time, \textit{t} (min)')
 
 plt.savefig('training_time.pdf', dpi=1500, format='pdf')
