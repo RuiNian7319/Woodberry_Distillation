@@ -33,7 +33,7 @@ class ReinforceLearning:
 
     def __init__(self, states_start, states_stop, states_interval, actions_start, actions_stop,
                  actions_interval, learning_rate=0.7, epsilon=0.5, doe=1.2, discount_factor=0.95, eval_period=1,
-                 random_seed=None):
+                 random_seed=None, beta=0.1):
 
         self.states = list(np.arange(states_start, states_stop, states_interval * 0.99))
         self.actions = list(np.arange(actions_start, actions_stop, actions_interval * 0.99))
@@ -61,7 +61,7 @@ class ReinforceLearning:
         self.eval = -9999
         # Should action selection be evaluated on the immediate next step
         self.next_eval = False
-        self.beta = 0.1
+        self.beta = beta
 
         # Seed the results for reproducability
         if random_seed is not None:

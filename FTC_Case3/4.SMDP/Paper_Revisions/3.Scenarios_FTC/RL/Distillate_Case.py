@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import random
 import os
+import time
 
 from copy import deepcopy
 from scipy.integrate import odeint
@@ -550,7 +551,7 @@ if __name__ == "__main__":
     # Build RL Objects
     rl = ReinforceLearning(discount_factor=0.95, states_start=300, states_stop=340, states_interval=0.5,
                            actions_start=-15, actions_stop=15, actions_interval=2.5, learning_rate=0.5,
-                           epsilon=0.2, doe=1.2, eval_period=15)
+                           epsilon=0.2, doe=1.2, eval_period=15, beta=1)
 
     # Building states for the problem, states will be the tracking errors
     states = []
@@ -607,7 +608,7 @@ if __name__ == "__main__":
     # Number of training steps
     training_steps = 0
 
-    episodes = 100000
+    episodes = 10000
     rlist = []
 
     for episode in range(episodes):
@@ -735,7 +736,7 @@ if __name__ == "__main__":
                 cumu_reward = []
 
                 rl.matrix_update(action_index, Reward, state, [env.y[t, 0] - set_point1, env.y[t, 1] - set_point2], 5,
-                                 min_learn_rate=0.05, tau=tau)
+                                 min_learn_rate=0.002, tau=tau)
 
                 tot_reward.append(reward_rate)
 

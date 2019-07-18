@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import time
 
 sys.path.insert(0, '/home/rui/Documents/Research/Models')
 sys.path.insert(0, '/home/rui/Documents/Research/Modules')
@@ -129,8 +130,10 @@ def simulation():
     Below are all the MPC and controller objects
     """
 
+    start_time = time.time()
+
     # Build MPC Object
-    control = ModelPredictiveControl(model_control.Nsim, 10, model_control.Nx, model_control.Nu, 1, 0.0, 0.0,
+    control = ModelPredictiveControl(model_control.Nsim, 50, model_control.Nx, model_control.Nu, 1, 0.0, 0.0,
                                      model_control.xs, model_control.us, eval_time=15, dist=False, gamma=0.9,
                                      upp_u_const=[99, 99, 99, 99], low_u_const=[0.0, 0.0, 0.0, 0.0],
                                      upp_x_const=[1000, 1000, 1000, 1000],
@@ -141,7 +144,7 @@ def simulation():
                                              verbosity=0, random_guess=False)
 
     # Build FTC-MPC Object
-    ftc_control = ModelPredictiveControl(model_control.Nsim, 10, model_control.Nx, model_control.Nu, 1, 0.0, 0.0,
+    ftc_control = ModelPredictiveControl(model_control.Nsim, 50, model_control.Nx, model_control.Nu, 1, 0.0, 0.0,
                                          ss_states=np.array([200.33, 130.86, 62.23, 40.74]), ss_inputs=model_control.us,
                                          eval_time=15, dist=False, gamma=0.9,
                                          upp_u_const=[12, 12, 99, 99], low_u_const=[12, 12, 0, 0],
@@ -224,10 +227,10 @@ def simulation():
         model_plant.y[t, 0] = model_plant.C[0, 0] * model_plant.x[t, 0] + model_plant.C[0, 2] * model_plant.x[t, 2]
         model_plant.y[t, 1] = model_plant.C[1, 1] * model_plant.x[t, 1] + model_plant.C[1, 3] * model_plant.x[t, 3]
 
-        if 98 < model_plant.y[t, 0] < 102 and t > 390:
-            print('Time to mediate: {} | RMSE: {} | t: {} | Value: {:2f}'.format(t - 360,
-                                                                          np.sum(np.abs(model_plant.y[360:t, 0] - 100)),
-                                                                          t, model_plant.y[t, 0]))
+        # if 98 < model_plant.y[t, 0] < 102 and t > 390:
+        #     print('Time to mediate: {} | RMSE: {} | t: {} | Value: {:2f}'.format(t - 360,
+        #                                                                   np.sum(np.abs(model_plant.y[360:t, 0] - 100)),
+        #                                                                   t, model_plant.y[t, 0]))
 
         # Update the P parameters for offset-free control
         control.p = model_plant.x[t, :] - model_control.x[t, 0:model_plant.Nx]
@@ -237,9 +240,11 @@ def simulation():
         if t == model_plant.Nsim:
             model_plant.u = deepcopy(model_control.u)
 
+    print("--- %s seconds ---" % (time.time() - start_time))
+
     # Plots the output
-    plt.plot(model_plant.y[330:1000, 0])
-    plt.plot(model_plant.y[330:1000, 1])
+    plt.plot(model_plant.y[0:2000, 0])
+    plt.plot(model_plant.y[0:2000, 1])
 
     plt.show()
 
